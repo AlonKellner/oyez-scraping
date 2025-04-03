@@ -11,7 +11,7 @@ Use the `uv remove ${some-package}` shell command to remove dependencies from th
 
 Use the `Pre-Commit All` task to sync the venv, apply formatting, run tests and to check yourself.  
 After every feature implementation test yourself using pytest tests in the `tests` directory, run the tests with the `Pre-Commit All` command.  
-When the `Pre-Commit All` task fails, next time try to run it with the shell tool using `pre-commit run --all`.
+When the `Pre-Commit All` task fails, next time try to run it with the shell tool using `pre-commit run --all-files`.
 
 # Git
 

@@ -32,6 +32,8 @@ networkx==3.4.2
     # via torch
 nodeenv==1.9.1
     # via pyright
+numpy==2.2.4
+    # via oyez-scraping (pyproject.toml)
 nvidia-cublas-cu12==12.4.5.8
     # via
     #   nvidia-cudnn-cu12

@@ -4,57 +4,19 @@ This module provides functionality to scrape oral arguments from the Oyez projec
 and create an ASR (Automatic Speech Recognition) dataset.
 """
 
+import contextlib
 import json
-from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
-import requests
-import torchaudio
-
-
-@dataclass
-class Speaker:
-    """Represents a speaker in an oral argument."""
-
-    name: str
-    role: str
-    identifier: str
-
-
-@dataclass
-class Utterance:
-    """Represents a single utterance in an oral argument."""
-
-    start_time: float  # Start time in seconds
-    end_time: float  # End time in seconds
-    speaker: Speaker
-    text: str
-    section: str | None = None  # E.g., "Opening", "Rebuttal", etc.
-    speaker_turn: int | None = None  # Sequential turn number for the speaker
-
-
-@dataclass
-class OralArgument:
-    """Represents a complete oral argument session."""
-
-    case_id: str
-    case_name: str
-    docket_number: str
-    argument_date: datetime
-    transcript_url: str
-    audio_url: str
-    duration: float  # Duration in seconds
-    speakers: list[Speaker]
-    utterances: list[Utterance]
-    term: str | None = None
-    description: str | None = None
+from src.api import OyezAPI
+from src.audio import AudioProcessor
+from src.models import OralArgument, Speaker, Utterance
+from src.utils import parse_date
 
 
 class OyezScraper:
     """Scraper for Oyez Supreme Court oral arguments."""
 
-    BASE_URL = "https://api.oyez.org/cases"
     AUDIO_SEGMENT_DIR = "segments"
     METADATA_FILE = "metadata.json"
 
@@ -68,69 +30,107 @@ class OyezScraper:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         (self.output_dir / self.AUDIO_SEGMENT_DIR).mkdir(exist_ok=True)
 
-    def _get_case_metadata(self, case_id: str) -> dict:
-        """Fetch case metadata from Oyez API.
+    def _extract_speakers(
+        self, arg_data: dict
+    ) -> tuple[list[Speaker], dict[str, Speaker]]:
+        """Extract speakers from argument data.
 
         Args:
-            case_id: The Oyez case identifier
+            arg_data: Argument data from API
 
         Returns
         -------
-            Dict containing case metadata
+            Tuple of (speaker_list, speaker_map)
         """
-        url = f"{self.BASE_URL}/{case_id}"
-        response = requests.get(url, headers={"Accept": "application/json"}, timeout=30)
-        response.raise_for_status()
-        return response.json()
+        print("DEBUG: Extracting speakers from:", json.dumps(arg_data, indent=2)[:1000])
+        speakers = []
+        speaker_map = {}
 
-    def _get_oral_argument_data(self, argument_url: str) -> dict:
-        """Fetch oral argument data including transcript and timing info.
+        # Look in sections first
+        for section in arg_data.get("sections", []):
+            for turn in section.get("turns", []):
+                spk = turn.get("speaker", {})
+                if not spk or "identifier" not in spk:
+                    continue
+
+                if spk["identifier"] not in speaker_map:
+                    speaker = Speaker(
+                        name=spk.get("name", "Unknown"),
+                        role=spk.get("roles", [{}])[0].get("role_title", "Unknown")
+                        if spk.get("roles")
+                        else "Unknown",
+                        identifier=spk["identifier"],
+                    )
+                    speakers.append(speaker)
+                    speaker_map[speaker.identifier] = speaker
+
+        # Also check transcript section if available
+        if "transcript" in arg_data and isinstance(arg_data["transcript"], dict):
+            for section in arg_data["transcript"].get("sections", []):
+                for turn in section.get("turns", []):
+                    spk = turn.get("speaker", {})
+                    if not spk or "identifier" not in spk:
+                        continue
+
+                    if spk["identifier"] not in speaker_map:
+                        speaker = Speaker(
+                            name=spk.get("name", "Unknown"),
+                            role=spk.get("roles", [{}])[0].get("role_title", "Unknown")
+                            if spk.get("roles")
+                            else "Unknown",
+                            identifier=spk["identifier"],
+                        )
+                        speakers.append(speaker)
+                        speaker_map[speaker.identifier] = speaker
+
+        print(f"DEBUG: Found {len(speakers)} speakers")
+        return speakers, speaker_map
+
+    def _extract_utterances(
+        self, arg_data: dict, speaker_map: dict[str, Speaker]
+    ) -> list[Utterance]:
+        """Extract utterances from argument data.
 
         Args:
-            argument_url: URL to the oral argument JSON data
+            arg_data: Argument data from API
+            speaker_map: Map of speaker identifiers to Speaker objects
 
         Returns
         -------
-            Dict containing oral argument data
+            List of utterances
         """
-        response = requests.get(
-            argument_url, headers={"Accept": "application/json"}, timeout=30
-        )
-        response.raise_for_status()
-        return response.json()
+        utterances = []
+        turn_counts = {}  # Track turn counts per speaker
 
-    def _download_audio(self, audio_url: str, output_path: Path) -> None:
-        """Download the oral argument audio file.
+        for section in arg_data.get("sections", []):
+            for turn in section.get("turns", []):
+                spk = turn.get("speaker", {})
+                if not spk or "identifier" not in spk:
+                    continue
 
-        Args:
-            audio_url: URL to the audio file
-            output_path: Where to save the audio file
-        """
-        response = requests.get(audio_url, stream=True, timeout=30)
-        response.raise_for_status()
+                speaker = speaker_map[spk["identifier"]]
+                # Update turn count for this speaker
+                turn_counts[speaker.identifier] = (
+                    turn_counts.get(speaker.identifier, 0) + 1
+                )
 
-        with output_path.open("wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+                for text_segment in turn.get("text_blocks", []):
+                    if text := text_segment.get("text"):
+                        with contextlib.suppress(ValueError, TypeError):
+                            start_time = float(text_segment.get("start", 0))
+                            end_time = float(text_segment.get("stop", 0))
+                            if end_time > start_time:  # Only add valid segments
+                                utterance = Utterance(
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    speaker=speaker,
+                                    text=text,
+                                    section=section.get("name"),
+                                    speaker_turn=turn_counts[speaker.identifier],
+                                )
+                                utterances.append(utterance)
 
-    def _extract_utterance_audio(
-        self,
-        audio_path: Path,
-        utterance: Utterance,
-        output_path: Path,
-    ) -> None:
-        """Extract utterance audio segment and save to file.
-
-        Args:
-            audio_path: Path to the complete audio file
-            utterance: Utterance to extract
-            output_path: Where to save the audio segment
-        """
-        waveform, sample_rate = torchaudio.load(audio_path)
-        start_frame = int(utterance.start_time * sample_rate)
-        end_frame = int(utterance.end_time * sample_rate)
-        segment = waveform[:, start_frame:end_frame]
-        torchaudio.save(str(output_path), segment, sample_rate)
+        return utterances
 
     def scrape_case(self, case_id: str) -> OralArgument:
         """Scrape a single case's oral argument.
@@ -143,7 +143,7 @@ class OyezScraper:
             OralArgument object containing all extracted data
         """
         # Get case metadata
-        case_data = self._get_case_metadata(case_id)
+        case_data = OyezAPI.get_case_metadata(case_id)
         if isinstance(case_data, list):
             if not case_data:
                 raise ValueError(f"No case data found for case {case_id}")
@@ -154,54 +154,37 @@ class OyezScraper:
         if not oral_args:
             raise ValueError(f"No oral argument found for case {case_id}")
 
-        # For this implementation, we'll use the first oral argument
-        arg_data = self._get_oral_argument_data(oral_args[0]["href"])
+        # Get full argument data
+        arg_data = OyezAPI.get_oral_argument_data(oral_args[0]["href"])
 
-        # Extract speakers
-        speakers = []
-        speaker_map = {}
-        for section in arg_data.get("sections", []):
-            for turn in section.get("turns", []):
-                spk = turn.get("speaker", {})
-                if spk.get("identifier") not in speaker_map:
-                    speaker = Speaker(
-                        name=spk.get("name", "Unknown"),
-                        role=spk.get("role", "Unknown"),
-                        identifier=spk.get("identifier", "unknown"),
-                    )
-                    speakers.append(speaker)
-                    speaker_map[speaker.identifier] = speaker
+        # Extract speakers and utterances
+        speakers, speaker_map = self._extract_speakers(arg_data)
+        utterances = self._extract_utterances(arg_data, speaker_map)
 
-        # Extract utterances
-        utterances = []
-        for section in arg_data.get("sections", []):
-            section_name = section.get("name")
-            for turn in section.get("turns", []):
-                spk = turn.get("speaker", {})
-                speaker = speaker_map[spk.get("identifier")]
+        # Get media URL and duration
+        audio_url, duration = OyezAPI.find_audio_url(arg_data.get("media_file", []))
 
-                for text_segment in turn.get("text_blocks", []):
-                    if text := text_segment.get("text"):
-                        start = float(text_segment.get("start", 0))
-                        end = float(text_segment.get("stop", 0))
-                        utterance = Utterance(
-                            start_time=start,
-                            end_time=end,
-                            speaker=speaker,
-                            text=text,
-                            section=section_name,
-                        )
-                        utterances.append(utterance)
+        # Use fallback duration if not found in media_file
+        if duration == 0.0 and "duration" in arg_data:
+            with contextlib.suppress(ValueError, TypeError):
+                duration = float(arg_data["duration"])
+
+        # Calculate duration from transcript timestamps if available
+        if duration == 0.0 and utterances:
+            duration = max(u.end_time for u in utterances)
+
+        if not audio_url:
+            raise ValueError(f"Could not find valid audio URL for case {case_id}")
 
         # Create OralArgument object
         argument = OralArgument(
             case_id=case_id,
             case_name=case_data.get("name", "Unknown"),
             docket_number=case_data.get("docket_number", "Unknown"),
-            argument_date=datetime.fromisoformat(arg_data.get("date", "1970-01-01")),
+            argument_date=parse_date(arg_data.get("date")),
             transcript_url=oral_args[0]["href"],
-            audio_url=arg_data.get("media_file", {}).get("href", ""),
-            duration=float(arg_data.get("duration", 0)),
+            audio_url=audio_url,
+            duration=duration,
             speakers=speakers,
             utterances=utterances,
             term=case_data.get("term"),
@@ -219,49 +202,57 @@ class OyezScraper:
         # Scrape the case data
         argument = self.scrape_case(case_id)
 
-        # Create case directory
-        case_dir = self.output_dir / case_id
+        # Create case directory (handle slashes in case IDs)
+        safe_case_id = case_id.replace("/", "-")
+        case_dir = self.output_dir / safe_case_id
         case_dir.mkdir(exist_ok=True)
 
         # Download full audio
         audio_path = case_dir / "full_audio.mp3"
-        self._download_audio(argument.audio_url, audio_path)
+        OyezAPI.download_audio(argument.audio_url, str(audio_path))
 
         # Extract individual utterances
         segments_dir = case_dir / self.AUDIO_SEGMENT_DIR
         segments_dir.mkdir(exist_ok=True)
 
         for i, utterance in enumerate(argument.utterances):
-            segment_path = segments_dir / f"segment_{i:04d}.wav"
-            self._extract_utterance_audio(audio_path, utterance, segment_path)
+            # Use segment number and speaker identifier in filename
+            segment_path = segments_dir / f"{i:04d}_{utterance.speaker.identifier}.wav"
+            AudioProcessor.extract_utterance_audio(audio_path, utterance, segment_path)
 
         # Save metadata
-        metadata = {
-            "case_id": argument.case_id,
-            "case_name": argument.case_name,
-            "docket_number": argument.docket_number,
-            "argument_date": argument.argument_date.isoformat(),
-            "duration": argument.duration,
-            "speakers": [
-                {
-                    "name": s.name,
-                    "role": s.role,
-                    "identifier": s.identifier,
-                }
-                for s in argument.speakers
-            ],
-            "utterances": [
-                {
-                    "start_time": u.start_time,
-                    "end_time": u.end_time,
-                    "speaker": u.speaker.identifier,
-                    "text": u.text,
-                    "section": u.section,
-                    "audio_file": f"segments/segment_{i:04d}.wav",
-                }
-                for i, u in enumerate(argument.utterances)
-            ],
-        }
-
-        with (case_dir / self.METADATA_FILE).open("w") as f:
+        metadata_path = case_dir / self.METADATA_FILE
+        with metadata_path.open("w") as f:
+            # Convert OralArgument to dict for JSON serialization
+            metadata = {
+                "case_id": argument.case_id,
+                "case_name": argument.case_name,
+                "docket_number": argument.docket_number,
+                "argument_date": argument.argument_date.isoformat(),
+                "transcript_url": argument.transcript_url,
+                "audio_url": argument.audio_url,
+                "duration": argument.duration,
+                "term": argument.term,
+                "description": argument.description,
+                "speakers": [
+                    {
+                        "name": s.name,
+                        "role": s.role,
+                        "identifier": s.identifier,
+                    }
+                    for s in argument.speakers
+                ],
+                "utterances": [
+                    {
+                        "start_time": u.start_time,
+                        "end_time": u.end_time,
+                        "speaker": u.speaker.identifier,
+                        "text": u.text,
+                        "section": u.section,
+                        "speaker_turn": u.speaker_turn,
+                        "audio_file": f"{i:04d}_{u.speaker.identifier}.wav",
+                    }
+                    for i, u in enumerate(argument.utterances)
+                ],
+            }
             json.dump(metadata, f, indent=2)
