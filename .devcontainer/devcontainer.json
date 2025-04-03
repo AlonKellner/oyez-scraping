@@ -53,7 +53,8 @@
     "LOCAL_USER_HOME": "${localEnv:HOME}${localEnv:USERPROFILE}",
     "DOCKER_OPTIONS": "-v '${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig':/root/.gitconfig -v '${localEnv:HOME}${localEnv:USERPROFILE}/.ssh':/root/.ssh -v '${localEnv:HOME}${localEnv:USERPROFILE}/.sky':/root/.sky -v '${localEnv:HOME}${localEnv:USERPROFILE}/.vscode-server':/root/.vscode-server -v '${localEnv:HOME}${localEnv:USERPROFILE}/.vscode-server-insiders':/root/.vscode-server-insiders -v '${localEnv:HOME}${localEnv:USERPROFILE}/.gcloud':/root/.config/gcloud -v '${localEnv:MOUNTS_PATH}/home/.cache':/root/.cache -v '${localEnv:MOUNTS_PATH}/${containerWorkspaceFolderBasename}/.app_cache':${containerWorkspaceFolder}/.app_cache",
     "CONTAINER_IMAGE": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
-    "USERNAME": "vscode"
+    "USERNAME": "vscode",
+    "UV_LINK_MODE": "copy"
   },
   "runArgs": [
     "--name=${containerWorkspaceFolderBasename}_vsc",

@@ -82,7 +82,13 @@ classifiers = [
   "Programming Language :: Python :: 3",
 ]
 
-dependencies = ["inquirer>=3.4.0"]
+dependencies = [
+  "beautifulsoup4>=4.13.3",
+  "inquirer>=3.4.0",
+  "pytest-cov>=6.1.0",
+  "requests>=2.32.3",
+  "torchaudio>=2.6.0",
+]
 
 [dependency-groups]
 dev = ["pytest", "pyright"]

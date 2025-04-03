@@ -37,7 +37,7 @@ repos:
         pass_filenames: false
       - id: uv-sync
         name: uv-sync
-        entry: uv sync --link-mode=copy
+        entry: uv sync
         language: system
         files: ^pyproject\.toml$
         pass_filenames: false

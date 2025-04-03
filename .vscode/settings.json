@@ -1,5 +1,4 @@
 {
-  "pre-commit-helper.runOnSave": "all hooks",
   "git.autofetch": true,
   "editor.tabSize": 4,
   "terminal.integrated.defaultProfile.linux": "zsh",
