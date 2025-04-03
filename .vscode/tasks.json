@@ -15,6 +15,23 @@
   ],
   "tasks": [
     {
+      "label": "Git push",
+      "detail": "Push an existing branch",
+      "type": "shell",
+      "command": "git push",
+      "hide": false,
+      "group": "none",
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": "$python"
+    },
+    {
       "label": "Git add all",
       "detail": "Add all changes to the git stage.",
       "type": "shell",
