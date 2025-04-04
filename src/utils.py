@@ -22,6 +22,15 @@ def parse_date(date_val: str | int | float | None) -> datetime:
         if not isinstance(date_val, str):
             return datetime.fromtimestamp(0)
 
+        # Check for date in title (e.g., "Oral Argument - February 21, 2023")
+        if date_val.startswith("Oral Argument - "):
+            date_part = date_val.replace("Oral Argument - ", "")
+            try:
+                # Convert month name to date
+                return datetime.strptime(date_part, "%B %d, %Y")
+            except ValueError:
+                pass
+
         # Try parsing common date formats
         for fmt in ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]:
             try:

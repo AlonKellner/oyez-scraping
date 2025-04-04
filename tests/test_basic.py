@@ -1,6 +1,8 @@
 """Basic tests for the oyez-scraping project."""
 
+import json
 import tempfile
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -91,35 +93,83 @@ def test_scrape_case(
 
 
 @pytest.mark.integration
-@patch("src.scraper.OyezScraper._extract_utterances")
-def test_real_scraping(mock_extract_utterances: Mock) -> None:
-    """Test scraping with actual API call to Oyez.
+def test_real_scraping() -> None:
+    """Test scraping with actual API call to Oyez and process the case.
 
-    This test performs a real API call to scrape Dobbs v. Jackson Women's Health,
-    a significant case about abortion rights.
+    This test performs a real API call to scrape a recent Supreme Court case and
+    processes the full audio into segments. The outputs are saved to the .output
+    directory.
     """
-    # Mock the utterance extraction since the API response format may have changed
-    mock_extract_utterances.return_value = [
-        Mock(start_time=0, end_time=10, speaker=Mock(identifier="test"), text="Test")
-    ]
+    # Use a relatively short and recent case
+    case_id = "2022/21-1333"  # Gonzalez v. Google LLC (2023)
 
-    case_id = "2021/19-1392"  # Dobbs v. Jackson Women's Health Organization
+    # Create the output directory
+    output_dir = Path(".output")
+    output_dir.mkdir(exist_ok=True)
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        scraper = OyezScraper(temp_dir)
-        argument = scraper.scrape_case(case_id)
+    # Create a scraper that outputs to .output directory
+    scraper = OyezScraper(str(output_dir))
 
-        # Basic metadata checks
-        assert isinstance(argument, OralArgument)
-        assert argument.case_id == case_id
-        assert "Dobbs" in argument.case_name
-        assert argument.docket_number == "19-1392"
-        assert argument.transcript_url
-        assert argument.audio_url
-        assert argument.duration > 0
+    # First scrape the case metadata
+    argument = scraper.scrape_case(case_id)
 
-        # Content checks
-        assert len(argument.speakers) > 0
-        # Some cases may not have the Chief Justice, so make this check more flexible
-        assert len([s for s in argument.speakers if s.role]) > 0
-        assert len(argument.utterances) > 0
+    # Basic metadata checks
+    assert isinstance(argument, OralArgument)
+    assert argument.case_id == case_id
+    assert "Gonzalez" in argument.case_name or "Google" in argument.case_name
+    assert argument.transcript_url
+    assert argument.audio_url
+    assert argument.duration > 0
+    assert len(argument.speakers) > 0
+
+    # Verify there are utterances
+    assert len(argument.utterances) > 0, "Should have extracted utterances"
+
+    # Verify the date - should be February 21, 2023
+    assert argument.argument_date.year == 2023
+    assert argument.argument_date.month == 2
+    assert argument.argument_date.day == 21
+
+    # Process the case (download audio and extract segments)
+    scraper.process_case(case_id)
+
+    # Verify that the output files were created
+    safe_case_id = case_id.replace("/", "-")
+    case_dir = output_dir / safe_case_id
+
+    # Check if full audio was downloaded
+    assert (case_dir / "full_audio.mp3").exists(), "Full audio file should exist"
+
+    # Check if metadata file was created
+    metadata_path = case_dir / scraper.METADATA_FILE
+    assert metadata_path.exists(), "Metadata file should exist"
+
+    # Check if segments directory was created
+    segments_dir = case_dir / scraper.AUDIO_SEGMENT_DIR
+    assert segments_dir.exists(), "Segments directory should exist"
+
+    # Verify segments were created in FLAC format
+    flac_segments = list(segments_dir.glob("*.flac"))
+    print(f"Found {len(flac_segments)} FLAC audio segments")
+    assert len(flac_segments) > 0, "Should have at least one FLAC audio segment"
+
+    # Verify that the metadata file contains utterance metrics
+    with metadata_path.open("r") as f:
+        metadata = json.loads(f.read())
+        assert "utterance_metrics" in metadata, (
+            "Metadata should include utterance metrics"
+        )
+        assert "total_utterance_time" in metadata["utterance_metrics"]
+        assert "total_non_utterance_time" in metadata["utterance_metrics"]
+        assert "utterance_time_percentage" in metadata["utterance_metrics"]
+        assert "non_utterance_time_percentage" in metadata["utterance_metrics"]
+
+        # Verify utterances have gap information
+        if "utterances" in metadata and len(metadata["utterances"]) > 0:
+            assert "gap_before" in metadata["utterances"][0], (
+                "Utterances should include gap info"
+            )
+            if len(metadata["utterances"]) > 1:
+                assert "gap_after" in metadata["utterances"][0], (
+                    "Utterances should include gap_after info"
+                )
