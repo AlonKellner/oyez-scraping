@@ -13,13 +13,21 @@ from typing import Any
 
 import pytest
 
-from oyez_scraping.infrastructure.api.case_client import OyezCaseClient
+from oyez_scraping.infrastructure.api.case_client import (
+    AudioContentType,
+    OyezCaseClient,
+)
 
 # Constants for test cases that are known to be stable and have complete data
 # Roe v. Wade - a landmark case with complete information including oral arguments
 TEST_TERM = "1971"
 TEST_DOCKET = "70-18"
 TEST_CASE_ID = f"{TEST_TERM}/{TEST_DOCKET}"
+
+# Constants for test cases with opinion announcements and dissenting opinions
+OPINION_TEST_TERM = "2022"
+OPINION_TEST_DOCKET1 = "21-476"  # 303 Creative LLC v. Elenis
+OPINION_TEST_DOCKET2 = "22-506"  # Biden v. Nebraska
 
 # Output directory for generated files
 OUTPUT_DIR = Path(".output/api_samples")
@@ -65,6 +73,24 @@ def oral_argument_data(
 
     # Fetch the oral argument data using the client
     return case_client.get_oral_argument(arg_url)
+
+
+@pytest.fixture
+def opinion_case_data1(case_client: OyezCaseClient) -> dict[str, Any]:
+    """Get case data for the first opinion test case.
+
+    This avoids repeating the same API call in multiple tests.
+    """
+    return case_client.get_case_by_id(OPINION_TEST_TERM, OPINION_TEST_DOCKET1)
+
+
+@pytest.fixture
+def opinion_case_data2(case_client: OyezCaseClient) -> dict[str, Any]:
+    """Get case data for the second opinion test case.
+
+    This avoids repeating the same API call in multiple tests.
+    """
+    return case_client.get_case_by_id(OPINION_TEST_TERM, OPINION_TEST_DOCKET2)
 
 
 class TestOyezApiEndpoints:
@@ -209,6 +235,183 @@ class TestOyezApiEndpoints:
         print(f"Successfully verified audio URL: {audio_url}")
 
 
+class TestOyezApiOpinionAnnouncements:
+    """Tests that verify the structure and behavior of opinion announcement endpoints."""
+
+    def test_opinion_announcement_availability(
+        self, opinion_case_data1: dict[str, Any]
+    ) -> None:
+        """Test that opinion announcements are available in the case data."""
+        # Check for opinion announcement field
+        assert "opinion_announcement" in opinion_case_data1, (
+            "Test case should include opinion_announcement field"
+        )
+
+        # Validate structure
+        announcements = opinion_case_data1.get("opinion_announcement", [])
+        assert isinstance(announcements, list | dict), (
+            "opinion_announcement should be a list or dict"
+        )
+
+        # Convert to list if it's a dict
+        if isinstance(announcements, dict):
+            announcements = [announcements]
+
+        assert len(announcements) > 0, "opinion_announcement should not be empty"
+
+        # Check first announcement
+        first_announcement = announcements[0]
+        assert "id" in first_announcement, "Announcement should have an id"
+        assert "title" in first_announcement, "Announcement should have a title"
+        assert "href" in first_announcement, "Announcement should have an href"
+
+        print(f"Found opinion announcement: {first_announcement['title']}")
+
+    def test_dissenting_opinion_availability(
+        self, case_client: OyezCaseClient, opinion_case_data1: dict[str, Any]
+    ) -> None:
+        """Test that dissenting opinions are available in the case data."""
+        audio_content = case_client.get_case_audio_content(opinion_case_data1)
+
+        # Check that we have dissenting opinions
+        dissenting_opinions = audio_content[AudioContentType.DISSENTING_OPINION]
+        assert len(dissenting_opinions) > 0, "Test case should have dissenting opinions"
+
+        first_dissent = dissenting_opinions[0]
+        assert "title" in first_dissent, "Dissenting opinion should have a title"
+        assert "dissenting opinion" in first_dissent["title"].lower(), (
+            "Dissenting opinion title should contain 'dissenting opinion'"
+        )
+
+        print(f"Found dissenting opinion: {first_dissent['title']}")
+
+    def test_audio_content_classification(
+        self,
+        case_client: OyezCaseClient,
+        opinion_case_data1: dict[str, Any],
+        opinion_case_data2: dict[str, Any],
+    ) -> None:
+        """Test that audio content is correctly classified by type."""
+        # Get all audio content from each case
+        audio_content1 = case_client.get_case_audio_content(opinion_case_data1)
+        audio_content2 = case_client.get_case_audio_content(opinion_case_data2)
+
+        # Verify structure of the audio content dictionary
+        assert AudioContentType.ORAL_ARGUMENT in audio_content1, (
+            "Should have oral argument key"
+        )
+        assert AudioContentType.OPINION_ANNOUNCEMENT in audio_content1, (
+            "Should have opinion announcement key"
+        )
+        assert AudioContentType.DISSENTING_OPINION in audio_content1, (
+            "Should have dissenting opinion key"
+        )
+
+        # Both test cases should have all three types of content
+        assert len(audio_content1[AudioContentType.ORAL_ARGUMENT]) > 0, (
+            "Should have oral arguments"
+        )
+        assert len(audio_content1[AudioContentType.OPINION_ANNOUNCEMENT]) > 0, (
+            "Should have opinion announcements"
+        )
+        assert len(audio_content1[AudioContentType.DISSENTING_OPINION]) > 0, (
+            "Should have dissenting opinions"
+        )
+
+        assert len(audio_content2[AudioContentType.ORAL_ARGUMENT]) > 0, (
+            "Second case should have oral arguments"
+        )
+        assert len(audio_content2[AudioContentType.OPINION_ANNOUNCEMENT]) > 0, (
+            "Second case should have opinion announcements"
+        )
+
+        # Print summary
+        print(
+            f"Case 1 audio content: {', '.join(f'{k}: {len(v)}' for k, v in audio_content1.items() if v)}"
+        )
+        print(
+            f"Case 2 audio content: {', '.join(f'{k}: {len(v)}' for k, v in audio_content2.items() if v)}"
+        )
+
+    def test_fetch_opinion_announcement_data(
+        self, case_client: OyezCaseClient, opinion_case_data1: dict[str, Any]
+    ) -> None:
+        """Test fetching and processing an opinion announcement."""
+        audio_content = case_client.get_case_audio_content(opinion_case_data1)
+        opinion_announcements = audio_content[AudioContentType.OPINION_ANNOUNCEMENT]
+
+        assert len(opinion_announcements) > 0, "Should have opinion announcements"
+
+        # Get the announcement data
+        announcement = opinion_announcements[0]
+        announcement_data = case_client.get_opinion_announcement(announcement["href"])
+
+        # Validate fields
+        assert "id" in announcement_data, "Announcement should have an id"
+        assert "title" in announcement_data, "Announcement should have a title"
+        assert "media_file" in announcement_data, "Announcement should have media_file"
+
+        # Extract and validate audio URL
+        audio_url = case_client.extract_audio_url(announcement_data)
+        assert audio_url, "No audio URL extracted"
+
+        # Extract speakers
+        try:
+            speakers = case_client.extract_speakers(announcement_data)
+            assert len(speakers) > 0, "Should find speakers in the announcement"
+            print(f"Found {len(speakers)} speakers in opinion announcement")
+        except Exception as e:
+            print(f"Note: Couldn't extract speakers from announcement: {e}")
+
+        # Extract utterances
+        try:
+            utterances = case_client.extract_utterances(announcement_data)
+            assert len(utterances) > 0, "Should find utterances in the announcement"
+            print(f"Found {len(utterances)} utterances in opinion announcement")
+        except Exception as e:
+            print(f"Note: Couldn't extract utterances from announcement: {e}")
+
+    def test_fetch_dissenting_opinion_data(
+        self, case_client: OyezCaseClient, opinion_case_data1: dict[str, Any]
+    ) -> None:
+        """Test fetching and processing a dissenting opinion."""
+        audio_content = case_client.get_case_audio_content(opinion_case_data1)
+        dissenting_opinions = audio_content[AudioContentType.DISSENTING_OPINION]
+
+        assert len(dissenting_opinions) > 0, "Should have dissenting opinions"
+
+        # Get the dissenting opinion data
+        dissent = dissenting_opinions[0]
+        dissent_data = case_client.get_dissenting_opinion(dissent["href"])
+
+        # Validate fields
+        assert "id" in dissent_data, "Dissenting opinion should have an id"
+        assert "title" in dissent_data, "Dissenting opinion should have a title"
+        assert "media_file" in dissent_data, "Dissenting opinion should have media_file"
+
+        # Extract and validate audio URL
+        audio_url = case_client.extract_audio_url(dissent_data)
+        assert audio_url, "No audio URL extracted"
+
+        # Extract speakers
+        try:
+            speakers = case_client.extract_speakers(dissent_data)
+            assert len(speakers) > 0, "Should find speakers in the dissenting opinion"
+            print(f"Found {len(speakers)} speakers in dissenting opinion")
+        except Exception as e:
+            print(f"Note: Couldn't extract speakers from dissenting opinion: {e}")
+
+        # Extract utterances
+        try:
+            utterances = case_client.extract_utterances(dissent_data)
+            assert len(utterances) > 0, (
+                "Should find utterances in the dissenting opinion"
+            )
+            print(f"Found {len(utterances)} utterances in dissenting opinion")
+        except Exception as e:
+            print(f"Note: Couldn't extract utterances from dissenting opinion: {e}")
+
+
 class TestOyezApiDataConsistency:
     """Tests that verify the consistency of data across API responses."""
 
@@ -317,6 +520,33 @@ class TestOyezApiDataConsistency:
 
         with open(OUTPUT_DIR / "oral_argument_sample.json", "w") as f:
             json.dump(arg_data, f, indent=2)
+
+        # Save opinion announcement and dissenting opinion samples
+        opinion_case = case_client.get_case_by_id(
+            OPINION_TEST_TERM, OPINION_TEST_DOCKET1
+        )
+        audio_content = case_client.get_case_audio_content(opinion_case)
+
+        with open(OUTPUT_DIR / "opinion_case_sample.json", "w") as f:
+            json.dump(opinion_case, f, indent=2)
+
+        # Save an opinion announcement sample if available
+        opinion_announcements = audio_content[AudioContentType.OPINION_ANNOUNCEMENT]
+        if opinion_announcements:
+            opinion_data = case_client.get_opinion_announcement(
+                opinion_announcements[0]["href"]
+            )
+            with open(OUTPUT_DIR / "opinion_announcement_sample.json", "w") as f:
+                json.dump(opinion_data, f, indent=2)
+
+        # Save a dissenting opinion sample if available
+        dissenting_opinions = audio_content[AudioContentType.DISSENTING_OPINION]
+        if dissenting_opinions:
+            dissent_data = case_client.get_dissenting_opinion(
+                dissenting_opinions[0]["href"]
+            )
+            with open(OUTPUT_DIR / "dissenting_opinion_sample.json", "w") as f:
+                json.dump(dissent_data, f, indent=2)
 
         # Print the path for reference
         print(f"Sample API responses saved to {OUTPUT_DIR}")

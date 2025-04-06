@@ -1,7 +1,7 @@
 """Client for accessing Oyez API case data.
 
 This module provides a client for interacting with the Oyez API to retrieve
-case information, oral arguments, and associated media.
+case information, oral arguments, opinion announcements, and associated media.
 """
 
 import logging
@@ -17,11 +17,19 @@ from oyez_scraping.infrastructure.exceptions.api_exceptions import (
 logger = logging.getLogger(__name__)
 
 
+class AudioContentType:
+    """Constants for audio content types."""
+
+    ORAL_ARGUMENT = "oral_argument"
+    OPINION_ANNOUNCEMENT = "opinion_announcement"
+    DISSENTING_OPINION = "dissenting_opinion"
+
+
 class OyezCaseClient(OyezClient):
     """Client for retrieving case data from the Oyez API.
 
     This class provides methods to fetch case information, oral arguments,
-    and associated media from the Oyez API.
+    opinion announcements, and associated media from the Oyez API.
     """
 
     def get_cases_by_term(self, term: str) -> list[dict[str, Any]]:
@@ -91,6 +99,99 @@ class OyezCaseClient(OyezClient):
         logger.info(f"Retrieved case details for {case_id}")
         return response
 
+    def get_case_audio_content(
+        self, case_data: dict[str, Any]
+    ) -> dict[str, list[dict[str, Any]]]:
+        """Get all available audio content from a case.
+
+        Args:
+            case_data: The case data dictionary from get_case_by_id
+
+        Returns
+        -------
+            A dictionary with keys for each content type, containing lists of audio content items
+
+        Example
+        -------
+        {
+            "oral_argument": [{"id": 123, "title": "Oral Argument", "href": "..."}],
+            "opinion_announcement": [{"id": 456, "title": "Opinion Announcement", "href": "..."}],
+            "dissenting_opinion": [{"id": 789, "title": "Dissenting Opinion", "href": "..."}]
+        }
+        """
+        result = {
+            AudioContentType.ORAL_ARGUMENT: [],
+            AudioContentType.OPINION_ANNOUNCEMENT: [],
+            AudioContentType.DISSENTING_OPINION: [],
+        }
+
+        # Extract oral arguments
+        oral_args = case_data.get("oral_argument_audio", [])
+        if isinstance(oral_args, list):
+            result[AudioContentType.ORAL_ARGUMENT] = oral_args
+        elif oral_args:  # Handle single item not in a list
+            result[AudioContentType.ORAL_ARGUMENT] = [oral_args]
+
+        # Extract opinion announcements and dissenting opinions
+        opinion_announcements = case_data.get("opinion_announcement", [])
+        if not isinstance(opinion_announcements, list):
+            opinion_announcements = (
+                [opinion_announcements] if opinion_announcements else []
+            )
+
+        for announcement in opinion_announcements:
+            if not isinstance(announcement, dict):
+                continue
+
+            title = announcement.get("title", "").lower()
+
+            # Categorize based on title
+            if "dissenting opinion" in title:
+                result[AudioContentType.DISSENTING_OPINION].append(announcement)
+            else:
+                result[AudioContentType.OPINION_ANNOUNCEMENT].append(announcement)
+
+        # Log the found content
+        content_summary = ", ".join(
+            f"{content_type}: {len(items)}"
+            for content_type, items in result.items()
+            if items
+        )
+
+        if content_summary:
+            logger.info(f"Found audio content: {content_summary}")
+        else:
+            logger.warning("No audio content found in case data")
+
+        return result
+
+    def get_audio_content(self, url_or_path: str) -> dict[str, Any]:
+        """Get audio content data from the Oyez API.
+
+        Args:
+            url_or_path: The URL or path to the audio content resource
+
+        Returns
+        -------
+            A dictionary containing audio content details
+
+        Raises
+        ------
+            OyezApiConnectionError: If connection to the API fails
+            OyezApiResponseError: If the API returns an unexpected response
+            OyezResourceNotFoundError: If the audio content is not found
+        """
+        logger.debug(f"Getting audio content data from {url_or_path}")
+        response = self.get(url_or_path)
+
+        if not isinstance(response, dict):
+            raise OyezApiResponseError(
+                f"Expected dictionary for audio content data, got {type(response)}"
+            )
+
+        logger.info(f"Retrieved audio content data from {url_or_path}")
+        return response
+
     def get_oral_argument(self, url_or_path: str) -> dict[str, Any]:
         """Get oral argument data from the Oyez API.
 
@@ -108,15 +209,45 @@ class OyezCaseClient(OyezClient):
             OyezResourceNotFoundError: If the oral argument is not found
         """
         logger.debug(f"Getting oral argument data from {url_or_path}")
-        response = self.get(url_or_path)
+        return self.get_audio_content(url_or_path)
 
-        if not isinstance(response, dict):
-            raise OyezApiResponseError(
-                f"Expected dictionary for oral argument data, got {type(response)}"
-            )
+    def get_opinion_announcement(self, url_or_path: str) -> dict[str, Any]:
+        """Get opinion announcement data from the Oyez API.
 
-        logger.info(f"Retrieved oral argument data from {url_or_path}")
-        return response
+        Args:
+            url_or_path: The URL or path to the opinion announcement resource
+
+        Returns
+        -------
+            A dictionary containing opinion announcement details
+
+        Raises
+        ------
+            OyezApiConnectionError: If connection to the API fails
+            OyezApiResponseError: If the API returns an unexpected response
+            OyezResourceNotFoundError: If the opinion announcement is not found
+        """
+        logger.debug(f"Getting opinion announcement data from {url_or_path}")
+        return self.get_audio_content(url_or_path)
+
+    def get_dissenting_opinion(self, url_or_path: str) -> dict[str, Any]:
+        """Get dissenting opinion data from the Oyez API.
+
+        Args:
+            url_or_path: The URL or path to the dissenting opinion resource
+
+        Returns
+        -------
+            A dictionary containing dissenting opinion details
+
+        Raises
+        ------
+            OyezApiConnectionError: If connection to the API fails
+            OyezApiResponseError: If the API returns an unexpected response
+            OyezResourceNotFoundError: If the dissenting opinion is not found
+        """
+        logger.debug(f"Getting dissenting opinion data from {url_or_path}")
+        return self.get_audio_content(url_or_path)
 
     def verify_audio_url(self, audio_url: str) -> bool:
         """Verify that an audio URL is accessible.
@@ -156,11 +287,11 @@ class OyezCaseClient(OyezClient):
             logger.warning(f"Audio URL {audio_url} verification failed: {e}")
             return False
 
-    def extract_audio_url(self, oral_argument_data: dict[str, Any]) -> str:
-        """Extract the best audio URL from oral argument data.
+    def extract_audio_url(self, audio_content_data: dict[str, Any]) -> str:
+        """Extract the best audio URL from audio content data.
 
         Args:
-            oral_argument_data: The oral argument data from the API
+            audio_content_data: The audio content data from the API
 
         Returns
         -------
@@ -171,7 +302,7 @@ class OyezCaseClient(OyezClient):
             OyezResourceNotFoundError: If no audio URL can be found
         """
         # Check for media file information
-        media_files = oral_argument_data.get("media_file", [])
+        media_files = audio_content_data.get("media_file", [])
 
         # Handle case where media_file is not a list
         if not isinstance(media_files, list):
@@ -179,7 +310,7 @@ class OyezCaseClient(OyezClient):
 
         if not media_files:
             raise OyezResourceNotFoundError(
-                "No media files found for the oral argument"
+                "No media files found for the audio content"
             )
 
         # Look for audio URLs
@@ -222,12 +353,12 @@ class OyezCaseClient(OyezClient):
         return audio_url
 
     def extract_speakers(
-        self, oral_argument_data: dict[str, Any]
+        self, audio_content_data: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Extract unique speakers from oral argument data.
+        """Extract unique speakers from audio content data.
 
         Args:
-            oral_argument_data: The oral argument data from the API
+            audio_content_data: The audio content data from the API
 
         Returns
         -------
@@ -240,34 +371,34 @@ class OyezCaseClient(OyezClient):
         speakers = {}  # Dictionary to track unique speakers by identifier
 
         # Process sources of speaker information in order of preference
-        self._extract_speakers_from_transcript(oral_argument_data, speakers)
-        self._extract_speakers_from_sections(oral_argument_data, speakers)
-        self._extract_speakers_from_root(oral_argument_data, speakers)
+        self._extract_speakers_from_transcript(audio_content_data, speakers)
+        self._extract_speakers_from_sections(audio_content_data, speakers)
+        self._extract_speakers_from_root(audio_content_data, speakers)
 
         # Convert dictionary to list
         speaker_list = list(speakers.values())
 
         if not speaker_list:
-            raise OyezResourceNotFoundError("No speakers found in oral argument data")
+            raise OyezResourceNotFoundError("No speakers found in audio content data")
 
-        logger.info(f"Extracted {len(speaker_list)} speakers from oral argument data")
+        logger.info(f"Extracted {len(speaker_list)} speakers from audio content data")
         return speaker_list
 
     def _extract_speakers_from_transcript(
-        self, oral_argument_data: dict[str, Any], speakers: dict[str, dict[str, Any]]
+        self, audio_content_data: dict[str, Any], speakers: dict[str, dict[str, Any]]
     ) -> None:
-        """Extract speakers from the transcript section of oral argument data.
+        """Extract speakers from the transcript section of audio content data.
 
         Args:
-            oral_argument_data: The oral argument data
+            audio_content_data: The audio content data
             speakers: Dictionary to populate with speakers
         """
-        if "transcript" not in oral_argument_data or not isinstance(
-            oral_argument_data["transcript"], dict
+        if "transcript" not in audio_content_data or not isinstance(
+            audio_content_data["transcript"], dict
         ):
             return
 
-        transcript = oral_argument_data["transcript"]
+        transcript = audio_content_data["transcript"]
 
         # Check if speakers are directly in the transcript
         if "speakers" in transcript and isinstance(transcript["speakers"], list):
@@ -285,36 +416,36 @@ class OyezCaseClient(OyezClient):
                 self._extract_speakers_from_turns(section.get("turns", []), speakers)
 
     def _extract_speakers_from_sections(
-        self, oral_argument_data: dict[str, Any], speakers: dict[str, dict[str, Any]]
+        self, audio_content_data: dict[str, Any], speakers: dict[str, dict[str, Any]]
     ) -> None:
         """Extract speakers from top-level sections.
 
         Args:
-            oral_argument_data: The oral argument data
+            audio_content_data: The audio content data
             speakers: Dictionary to populate with speakers
         """
-        if "sections" not in oral_argument_data or not isinstance(
-            oral_argument_data["sections"], list
+        if "sections" not in audio_content_data or not isinstance(
+            audio_content_data["sections"], list
         ):
             return
 
-        for section in oral_argument_data["sections"]:
+        for section in audio_content_data["sections"]:
             self._extract_speakers_from_turns(section.get("turns", []), speakers)
 
     def _extract_speakers_from_root(
-        self, oral_argument_data: dict[str, Any], speakers: dict[str, dict[str, Any]]
+        self, audio_content_data: dict[str, Any], speakers: dict[str, dict[str, Any]]
     ) -> None:
         """Extract speakers from top-level data.
 
         Args:
-            oral_argument_data: The oral argument data
+            audio_content_data: The audio content data
             speakers: Dictionary to populate with speakers
         """
         # Extract from top-level speakers if available
-        if "speakers" in oral_argument_data and isinstance(
-            oral_argument_data["speakers"], list
+        if "speakers" in audio_content_data and isinstance(
+            audio_content_data["speakers"], list
         ):
-            for speaker in oral_argument_data["speakers"]:
+            for speaker in audio_content_data["speakers"]:
                 if isinstance(speaker, dict) and "identifier" in speaker:
                     speakers[speaker["identifier"]] = {
                         "identifier": speaker["identifier"],
@@ -323,10 +454,10 @@ class OyezCaseClient(OyezClient):
                     }
 
         # Extract from top-level turns if available
-        if "turns" in oral_argument_data and isinstance(
-            oral_argument_data["turns"], list
+        if "turns" in audio_content_data and isinstance(
+            audio_content_data["turns"], list
         ):
-            self._extract_speakers_from_turns(oral_argument_data["turns"], speakers)
+            self._extract_speakers_from_turns(audio_content_data["turns"], speakers)
 
     def _extract_speakers_from_turns(
         self, turns: list[dict[str, Any]], speakers: dict[str, dict[str, Any]]
@@ -354,12 +485,12 @@ class OyezCaseClient(OyezClient):
                 }
 
     def extract_utterances(
-        self, oral_argument_data: dict[str, Any]
+        self, audio_content_data: dict[str, Any]
     ) -> list[dict[str, Any]]:
-        """Extract utterances with timing information from oral argument data.
+        """Extract utterances with timing information from audio content data.
 
         Args:
-            oral_argument_data: The oral argument data from the API
+            audio_content_data: The audio content data from the API
 
         Returns
         -------
@@ -372,30 +503,30 @@ class OyezCaseClient(OyezClient):
         utterances = []
 
         # Process sources of utterances in order of preference
-        self._extract_utterances_from_transcript(oral_argument_data, utterances)
-        self._extract_utterances_from_root(oral_argument_data, utterances)
+        self._extract_utterances_from_transcript(audio_content_data, utterances)
+        self._extract_utterances_from_root(audio_content_data, utterances)
 
         if not utterances:
-            raise OyezResourceNotFoundError("No utterances found in oral argument data")
+            raise OyezResourceNotFoundError("No utterances found in audio content data")
 
-        logger.info(f"Extracted {len(utterances)} utterances from oral argument data")
+        logger.info(f"Extracted {len(utterances)} utterances from audio content data")
         return utterances
 
     def _extract_utterances_from_transcript(
-        self, oral_argument_data: dict[str, Any], utterances: list[dict[str, Any]]
+        self, audio_content_data: dict[str, Any], utterances: list[dict[str, Any]]
     ) -> None:
         """Extract utterances from the transcript section.
 
         Args:
-            oral_argument_data: The oral argument data
+            audio_content_data: The audio content data
             utterances: List to populate with utterances
         """
-        if "transcript" not in oral_argument_data or not isinstance(
-            oral_argument_data["transcript"], dict
+        if "transcript" not in audio_content_data or not isinstance(
+            audio_content_data["transcript"], dict
         ):
             return
 
-        transcript = oral_argument_data["transcript"]
+        transcript = audio_content_data["transcript"]
 
         # Check in transcript sections
         if "sections" in transcript and isinstance(transcript["sections"], list):
@@ -421,28 +552,28 @@ class OyezCaseClient(OyezClient):
             self._extract_utterances_from_text_only(transcript["text_only"], utterances)
 
     def _extract_utterances_from_root(
-        self, oral_argument_data: dict[str, Any], utterances: list[dict[str, Any]]
+        self, audio_content_data: dict[str, Any], utterances: list[dict[str, Any]]
     ) -> None:
         """Extract utterances from root-level elements.
 
         Args:
-            oral_argument_data: The oral argument data
+            audio_content_data: The audio content data
             utterances: List to populate with utterances
         """
         # Extract from top-level sections if available
-        if "sections" in oral_argument_data and isinstance(
-            oral_argument_data["sections"], list
+        if "sections" in audio_content_data and isinstance(
+            audio_content_data["sections"], list
         ):
-            for section in oral_argument_data["sections"]:
+            for section in audio_content_data["sections"]:
                 self._extract_utterances_from_turns(
                     section.get("turns", []), utterances
                 )
 
         # Extract from top-level turns if available
-        if "turns" in oral_argument_data and isinstance(
-            oral_argument_data["turns"], list
+        if "turns" in audio_content_data and isinstance(
+            audio_content_data["turns"], list
         ):
-            self._extract_utterances_from_turns(oral_argument_data["turns"], utterances)
+            self._extract_utterances_from_turns(audio_content_data["turns"], utterances)
 
     def _extract_utterances_from_turns(
         self, turns: list[dict[str, Any]], utterances: list[dict[str, Any]]
@@ -611,9 +742,9 @@ class OyezCaseClient(OyezClient):
             if not isinstance(speaker, dict):
                 continue
 
-            speaker_id = speaker.get("identifier", "")
-            if not speaker_id and "name" in speaker:
-                speaker_id = speaker.get("name", "")
+            speaker_id = segment.get("speaker", {}).get("identifier", "")
+            if not speaker_id and "name" in segment.get("speaker", {}):
+                speaker_id = segment.get("speaker", {}).get("name", "")
 
             text = segment.get("text", "")
 

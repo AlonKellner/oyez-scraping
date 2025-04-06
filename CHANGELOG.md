@@ -4,6 +4,13 @@
 
 ### Added
 
+- Added support for opinion announcements and dissenting opinions in addition to oral arguments:
+
+  - New `AudioContentType` constants for different content types
+  - Enhanced `OyezCaseClient` to retrieve and categorize different audio content types
+  - Added methods for fetching and processing opinion announcements and dissenting opinions
+  - Created integration tests validating the handling of all audio content types
+
 - Implemented robust audio processing module (`oyez_scraping.infrastructure.processing.audio_io`) with the following features:
 
   - FLAC format support with high-quality audio encoding/decoding
