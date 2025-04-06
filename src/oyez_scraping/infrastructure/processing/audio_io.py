@@ -9,7 +9,7 @@ from pathlib import Path
 
 import torch
 import torchaudio
-from torchaudio.backend.common import AudioMetaData
+from torchaudio import AudioMetaData
 
 from oyez_scraping.infrastructure.exceptions.audio_exceptions import (
     AudioProcessingError,

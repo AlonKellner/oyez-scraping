@@ -137,6 +137,15 @@ wheels = [
 ]
 
 [[package]]
+name = "backoff"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/d7/5bbeb12c44d7c4f2fb5b56abce497eb5ed9f34d85701de869acedd602619/backoff-2.2.1.tar.gz", hash = "sha256:03f829f5bb1923180821643f8753b0502c3b682293992485b0eef2807afa5cba", size = 17001 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/73/b6e24bd22e6720ca8ee9a85a0c4a2971af8497d8f3193fa05390cbd46e09/backoff-2.2.1-py3-none-any.whl", hash = "sha256:63579f9a0628e06278f7e47b7d7d5b6ce20dc65c5e96a6f3ca99a6adca0396e8", size = 15148 },
+]
+
+[[package]]
 name = "beautifulsoup4"
 version = "4.13.3"
 source = { registry = "https://pypi.org/simple" }
@@ -829,11 +838,13 @@ name = "oyez-scraping"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
+    { name = "backoff" },
     { name = "beautifulsoup4" },
     { name = "inquirer" },
     { name = "numpy" },
     { name = "pytest-cov" },
     { name = "pytest-timeout" },
+    { name = "ratelimit" },
     { name = "requests" },
     { name = "torchaudio" },
     { name = "tqdm" },
@@ -848,11 +859,13 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.11.16" },
+    { name = "backoff", specifier = ">=2.2.1" },
     { name = "beautifulsoup4", specifier = ">=4.13.3" },
     { name = "inquirer", specifier = ">=3.4.0" },
     { name = "numpy", specifier = ">=2.2.4" },
     { name = "pytest-cov", specifier = ">=6.1.0" },
     { name = "pytest-timeout", specifier = ">=2.3.1" },
+    { name = "ratelimit", specifier = ">=2.2.1" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "torchaudio", specifier = ">=2.6.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -1025,6 +1038,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/93/0d/04719abc7a4bdb3a7
 wheels = [
     { url = "https://files.pythonhosted.org/packages/03/27/14af9ef8321f5edc7527e47def2a21d8118c6f329a9342cc61387a0c0599/pytest_timeout-2.3.1-py3-none-any.whl", hash = "sha256:68188cb703edfc6a18fad98dc25a3c61e9f24d644b0b70f33af545219fc7813e", size = 14148 },
 ]
+
+[[package]]
+name = "ratelimit"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/38/ff60c8fc9e002d50d48822cc5095deb8ebbc5f91a6b8fdd9731c87a147c9/ratelimit-2.2.1.tar.gz", hash = "sha256:af8a9b64b821529aca09ebaf6d8d279100d766f19e90b5059ac6a718ca6dee42", size = 5251 }
 
 [[package]]
 name = "readchar"

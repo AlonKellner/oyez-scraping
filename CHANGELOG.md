@@ -17,11 +17,19 @@
 
   - Base `InfrastructureError` class
   - Specialized `AudioProcessingError` class with context information
+  - API-specific exceptions including `OyezApiError`, `RateLimitError`, `NetworkError`, `ResponseFormatError`, and `AudioUrlError`
 
 - Added comprehensive testing suite:
+
   - Unit tests for all audio processing functions
   - Integration tests for file operations and format conversions
   - Error handling tests for edge cases
+  - Integration tests for Oyez API endpoints validating structure, relations, and media availability
+
+- Implemented Oyez API client infrastructure:
+  - Base API client with rate limiting and retry functionality
+  - Case-specific client for handling different Oyez API endpoints
+  - Robust error handling for API requests
 
 ### Changed
 
@@ -34,6 +42,7 @@
 - Enhanced error handling with detailed context information
 - Improved code organization following layered architecture principles
 - Added robust parameter validation for all functions
+- Added API response samples for development reference in docs/api_investigation
 
 ### Infrastructure
 

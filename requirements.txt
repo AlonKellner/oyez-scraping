@@ -8,6 +8,8 @@ aiosignal==1.3.2
     # via aiohttp
 attrs==25.3.0
     # via aiohttp
+backoff==2.2.1
+    # via oyez-scraping (pyproject.toml)
 beautifulsoup4==4.13.3
     # via oyez-scraping (pyproject.toml)
 blessed==1.20.0
@@ -104,6 +106,8 @@ pytest==8.3.5
 pytest-cov==6.1.0
     # via oyez-scraping (pyproject.toml)
 pytest-timeout==2.3.1
+    # via oyez-scraping (pyproject.toml)
+ratelimit==2.2.1
     # via oyez-scraping (pyproject.toml)
 readchar==4.2.1
     # via inquirer
