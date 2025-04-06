@@ -126,12 +126,12 @@ from pydantic import BaseModel
 
 class OyezApiClient:
     """Base client for Oyez API with retry and rate limiting."""
-    
+
     def __init__(self, base_url: str = "https://api.oyez.org", request_delay: float = 1.0):
         self.base_url = base_url
         self.session = requests.Session()
         self.session.headers.update({"Accept": "application/json"})
-    
+
     @on_exception(expo, (requests.exceptions.RequestException, RateLimitException), max_tries=5)
     @limits(calls=1, period=1)  # Max 1 call per second
     def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -146,45 +146,45 @@ class OyezApiClient:
 
 class CaseApiClient:
     """Client for case-specific Oyez API endpoints."""
-    
+
     def __init__(self, base_client: OyezApiClient):
         self.client = base_client
-    
+
     def get_cases_by_term(self, term: str) -> List[Dict[str, Any]]:
         """Get cases for a specific term.
-        
+
         Note: This endpoint returns basic case data WITHOUT audio information.
         """
         cases = self.client.get(f"cases", params={"filter": f"term:{term}"})
         return cases
-    
+
     def get_case_by_id(self, term: str, docket_number: str) -> Dict[str, Any]:
         """Get detailed case data by term and docket number.
-        
+
         Note: This endpoint returns complete case data WITH audio information.
         """
         case_id = f"{term}/{docket_number}"
         case_data = self.client.get(f"cases/{case_id}")
-        
+
         # Handle list response format (API sometimes returns a list)
         if isinstance(case_data, list):
             if not case_data:
                 raise ValueError(f"No case data found for {case_id}")
             return case_data[0]
-        
+
         return case_data
-    
+
     def get_oral_argument_data(self, argument_url: str) -> Dict[str, Any]:
         """Get detailed oral argument data from its URL."""
         # Strip base URL if included in the argument_url
         if argument_url.startswith(self.client.base_url):
             argument_url = argument_url[len(self.client.base_url) + 1:]
-        
+
         return self.client.get(argument_url)
 
 class OralArgumentResponseDTO(BaseModel):
     """Data transfer object for oral argument API responses.
-    
+
     This model handles the inconsistent response format from the API.
     """
     id: int
@@ -194,7 +194,7 @@ class OralArgumentResponseDTO(BaseModel):
     media_file: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]] = None
     duration: Optional[float] = None
     date: Optional[str] = None
-    
+
     class Config:
         extra = "allow"  # Allow extra fields
 ```
@@ -224,7 +224,7 @@ class Utterance(BaseModel):
     text: str
     section: Optional[str] = None
     speaker_turn: Optional[int] = None
-    
+
     @validator('end_time')
     def end_time_must_be_greater_than_start_time(cls, v, values):
         if 'start_time' in values and v <= values['start_time']:
@@ -250,7 +250,7 @@ class OralArgument(BaseModel):
     utterances: List<Utterance>
     term: Optional[str] = None
     description: Optional[str] = None
-    
+
     def get_speaker_by_id(self, identifier: str) -> Optional[Speaker]:
         """Get a speaker by their identifier."""
         for speaker in self.speakers:
@@ -276,36 +276,36 @@ from oyez_api.exceptions import OyezApiError
 
 class CaseService:
     """Service for retrieving and processing case data."""
-    
+
     def __init__(self, case_client: CaseApiClient, audio_client: AudioApiClient):
         self.case_client = case_client
         self.audio_client = audio_client
-    
+
     def get_case(self, term: str, docket_number: str) -> OralArgument:
         """Get a case with its oral argument data."""
         # Get detailed case data (includes audio information)
         case_data = self.case_client.get_case_by_id(term, docket_number)
-        
+
         # Check if the case has oral arguments
         oral_args = case_data.get("oral_argument_audio", [])
         if not oral_args:
             raise ValueError(f"No oral argument found for case {term}/{docket_number}")
-        
+
         # Get detailed oral argument data
         arg_data = self.case_client.get_oral_argument_data(oral_args[0]["href"])
-        
+
         # Process case data to extract basic info
         case_basic_info = self._extract_basic_info(case_data)
-        
+
         # Extract audio information
         audio_info = self._extract_audio_info(arg_data)
-        
+
         # Extract speakers from the data
         speakers = self._extract_speakers(arg_data)
-        
+
         # Extract utterances from the data
         utterances = self._extract_utterances(arg_data, speakers)
-        
+
         # Return a complete OralArgument object
         return OralArgument(
             **case_basic_info,
@@ -313,7 +313,7 @@ class CaseService:
             speakers=speakers,
             utterances=utterances
         )
-    
+
     def _extract_basic_info(self, case_data: Dict[str, Any]) -> Dict[str, Any]:
         """Extract basic case information from case data."""
         return {
@@ -325,30 +325,30 @@ class CaseService:
             "term": case_data.get("term", ""),
             "description": case_data.get("description", ""),
         }
-    
+
     def _parse_date(self, case_data: Dict[str, Any]) -> datetime:
         """Parse date from case data."""
         # Implementation depends on the date format in the API
         # This is just a placeholder
         return datetime.now()
-    
+
     def _extract_audio_info(self, arg_data: Dict[str, Any]) -> AudioFile:
         """Extract audio information from argument data."""
         audio_url, duration = self._find_audio_url(arg_data.get("media_file", []))
-        
+
         if not audio_url:
             raise ValueError("Could not find valid audio URL")
-        
+
         # Use fallback duration if not found in media_file
         if duration == 0.0 and "duration" in arg_data:
             with contextlib.suppress(ValueError, TypeError):
                 duration = float(arg_data["duration"])
-        
+
         return AudioFile(
             url=audio_url,
             duration=duration,
         )
-    
+
     def _find_audio_url(self, media_files: Any) -> Tuple[str, float]:
         """Find the best audio URL and duration from media files."""
         audio_url = ""
@@ -377,23 +377,23 @@ class CaseService:
                     break
 
         return audio_url, duration
-    
+
     def _extract_speakers(self, arg_data: Dict[str, Any]) -> List[Speaker]:
         """Extract speakers from argument data."""
         speakers = []
         speaker_map = {}
-        
+
         # Look in sections first
         for section in arg_data.get("sections", []):
             self._process_section_speakers(section, speakers, speaker_map)
-        
+
         # Also check transcript section if available
         if "transcript" in arg_data and isinstance(arg_data["transcript"], dict):
             for section in arg_data["transcript"].get("sections", []):
                 self._process_section_speakers(section, speakers, speaker_map)
-        
+
         return speakers
-    
+
     def _process_section_speakers(
         self, section: Dict[str, Any], speakers: List[Speaker], speaker_map: Dict[str, Speaker]
     ) -> None:
@@ -402,7 +402,7 @@ class CaseService:
             spk = turn.get("speaker", {})
             if not spk or "identifier" not in spk:
                 continue
-            
+
             if spk["identifier"] not in speaker_map:
                 speaker = Speaker(
                     name=spk.get("name", "Unknown"),
@@ -411,18 +411,18 @@ class CaseService:
                 )
                 speakers.append(speaker)
                 speaker_map[speaker.identifier] = speaker
-    
+
     def _extract_role(self, speaker_data: Dict[str, Any]) -> str:
         """Extract role from speaker data."""
         if not speaker_data.get("roles"):
             return "Unknown"
-        
+
         roles = speaker_data.get("roles", [{}])
         if isinstance(roles, list) and roles:
             return roles[0].get("role_title", "Unknown")
-        
+
         return "Unknown"
-    
+
     def _extract_utterances(
         self, arg_data: Dict[str, Any], speakers: List[Speaker]
     ) -> List[Utterance]:
@@ -447,9 +447,9 @@ from storage.filesystem import FileSystemStorage
 
 class DatasetGenerator:
     """Generates a dataset from Oyez oral arguments."""
-    
+
     def __init__(
-        self, 
+        self,
         case_service: CaseService,
         audio_processor: AudioProcessor,
         storage: FileSystemStorage,
@@ -459,70 +459,70 @@ class DatasetGenerator:
         self.audio_processor = audio_processor
         self.storage = storage
         self.output_dir = output_dir
-    
+
     def generate_from_case(self, term: str, docket_number: str) -> Path:
         """Generate dataset content from a single case."""
         # Get the case data
         case = self.case_service.get_case(term, docket_number)
-        
+
         # Create the case directory
         case_dir = self._create_case_directory(case)
-        
+
         # Download the audio file
         audio_path = self._download_audio(case, case_dir)
-        
+
         # Process the audio and extract segments
         segments_dir = self._process_audio_segments(case, audio_path, case_dir)
-        
+
         # Generate metadata
         self._generate_metadata(case, case_dir, audio_path)
-        
+
         return case_dir
-    
+
     def _create_case_directory(self, case: OralArgument) -> Path:
         """Create directory structure for a case."""
         # Handle slashes in case IDs
         safe_case_id = case.case_id.replace("/", "-")
         case_dir = self.output_dir / safe_case_id
         case_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create segments directory
         segments_dir = case_dir / "segments"
         segments_dir.mkdir(exist_ok=True)
-        
+
         return case_dir
-    
+
     def _download_audio(self, case: OralArgument, case_dir: Path) -> Path:
         """Download audio for a case."""
         audio_path = case_dir / "full_audio.mp3"
         self.storage.download_file(case.audio.url, audio_path)
         return audio_path
-    
+
     def _process_audio_segments(
         self, case: OralArgument, audio_path: Path, case_dir: Path
     ) -> Path:
         """Process audio and extract segments."""
         segments_dir = case_dir / "segments"
-        
+
         # Load the audio file
         self.audio_processor.load_audio(audio_path)
-        
+
         # Process each utterance
         for i, utterance in enumerate(case.utterances):
             segment_path = segments_dir / f"{i:04d}_{utterance.speaker.identifier}.flac"
             self.audio_processor.extract_utterance(utterance, segment_path)
-        
+
         return segments_dir
-    
+
     def _generate_metadata(
         self, case: OralArgument, case_dir: Path, audio_path: Path
     ) -> None:
         """Generate metadata files for the case."""
         metadata_path = case_dir / "metadata.json"
-        
+
         # Calculate utterance metrics
         utterance_metrics = self._calculate_utterance_metrics(case.utterances, case.audio.duration)
-        
+
         # Convert OralArgument to dict for JSON serialization
         metadata = {
             "case_id": case.case_id,
@@ -557,10 +557,10 @@ class DatasetGenerator:
                 for i, u in enumerate(case.utterances)
             ],
         }
-        
+
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
-    
+
     def _calculate_utterance_metrics(
         self, utterances: List[Utterance], total_duration: float
     ) -> Dict[str, Any]:

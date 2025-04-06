@@ -4,7 +4,7 @@ These instructions are designed to guide an LLM agent through the development of
 
 ## Project Understanding Phase
 
-1. **API Exploration First**: 
+1. **API Exploration First**:
    - Before writing any code, thoroughly investigate the Oyez API structure
    - Document the inconsistencies between endpoints:
      - Direct case lookup (`https://api.oyez.org/cases/{term}/{docket_number}`) returns complete audio data
@@ -79,7 +79,7 @@ These instructions are designed to guide an LLM agent through the development of
 
 For each feature you implement, follow this workflow:
 
-1. **Plan**: 
+1. **Plan**:
    - Define the feature's scope
    - Identify the modules that need to be created or modified
    - Define the interfaces between components
@@ -88,7 +88,7 @@ For each feature you implement, follow this workflow:
 
 2. **Test-First Development**:
    - Write tests for the feature before implementation
-   - Use real API response examples from the docs directory as test fixtures 
+   - Use real API response examples from the docs directory as test fixtures
    - Include both happy path and error cases
    - Mock external dependencies
 
