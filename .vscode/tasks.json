@@ -50,7 +50,7 @@
     },
     {
       "label": "Add uv dependency",
-      "detail": "Use uv to add dependencies in this project (in the pyproject.toml), run `Pre-Commit All` to fully sync the venv.",
+      "detail": "Use uv to add dependencies in this project (in the pyproject.toml), run `pre-commit run --all-files` to fully sync the venv.",
       "type": "shell",
       "command": "uv add \"${input:python-package}\"",
       "hide": false,
@@ -67,43 +67,9 @@
     },
     {
       "label": "Remove uv dependency",
-      "detail": "Use uv to remove dependencies from this project (in the pyproject.toml), run `Pre-Commit All` to fully sync the venv.",
+      "detail": "Use uv to remove dependencies from this project (in the pyproject.toml), run `pre-commit run --all-files` to fully sync the venv.",
       "type": "shell",
       "command": "uv remove \"${input:python-package}\"",
-      "hide": false,
-      "group": "none",
-      "presentation": {
-        "echo": false,
-        "reveal": "always",
-        "focus": true,
-        "panel": "dedicated",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": "$python"
-    },
-    {
-      "label": "Pre-Commit All",
-      "detail": "Applies type-checking, linting, formatting, testing, venv sync and more to all files.",
-      "type": "shell",
-      "command": "git add . && pre-commit run --all-files",
-      "hide": false,
-      "group": "none",
-      "presentation": {
-        "echo": false,
-        "reveal": "always",
-        "focus": true,
-        "panel": "dedicated",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": "$python"
-    },
-    {
-      "label": "Pre-Commit Current",
-      "detail": "Applies type-checking, linting, formatting, testing and more to the current file.",
-      "type": "shell",
-      "command": "pre-commit run --files ${file}",
       "hide": false,
       "group": "none",
       "presentation": {

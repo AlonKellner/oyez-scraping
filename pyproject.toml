@@ -84,12 +84,15 @@ classifiers = [
 ]
 
 dependencies = [
+  "aiohttp>=3.11.16",
   "beautifulsoup4>=4.13.3",
   "inquirer>=3.4.0",
   "numpy>=2.2.4",
   "pytest-cov>=6.1.0",
+  "pytest-timeout>=2.3.1",
   "requests>=2.32.3",
   "torchaudio>=2.6.0",
+  "tqdm>=4.67.1",
 ]
 
 [dependency-groups]

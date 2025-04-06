@@ -1,0 +1,172 @@
+[
+  {
+    "ID": 63453,
+    "name": "Students for Fair Admissions v. President and Fellows of Harvard College",
+    "href": "https://api.oyez.org/cases/2022/20-1199",
+    "view_count": 0,
+    "docket_number": "20-1199",
+    "timeline": [
+      {
+        "event": "Granted",
+        "dates": [1643004000],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55037"
+      },
+      {
+        "event": "Argued",
+        "dates": [1667192400],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55165"
+      },
+      {
+        "event": "Decided",
+        "dates": [1688014800],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55304"
+      }
+    ],
+    "question": "\u003Cp\u003EMay institutions of higher education use race as a factor in admissions?\u003C/p\u003E\n\u003Cp\u003EIf so, does Harvard College\u2019s race-conscious admissions process violate Title VI of the Civil Rights Act of 1964?\u003C/p\u003E\n",
+    "citation": {
+      "volume": "600",
+      "page": null,
+      "year": "2023",
+      "href": "https://api.oyez.org/case_citation/case_citation/27878"
+    },
+    "term": "2022",
+    "description": "A case in which the Court overruled its decision in Grutter v. Bollinger to hold that institutions of higher education cannot use race as a factor in admissions.",
+    "justia_url": "https://supreme.justia.com/cases/federal/us/600/20-1199/"
+  },
+  {
+    "ID": 63454,
+    "name": "Axon Enterprise, Inc. v. Federal Trade Commission",
+    "href": "https://api.oyez.org/cases/2022/21-86",
+    "view_count": 0,
+    "docket_number": "21-86",
+    "timeline": [
+      {
+        "event": "Granted",
+        "dates": [1643004000],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55038"
+      },
+      {
+        "event": "Argued",
+        "dates": [1667800800],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55169"
+      },
+      {
+        "event": "Decided",
+        "dates": [1681448400],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55245"
+      }
+    ],
+    "question": "\u003Cp\u003EDo federal courts have jurisdiction to hear constitutional challenges to the Federal Trade Commission\u2019s structure, procedure, and existence, or must such challenges be raised first in the administrative proceeding?\u003C/p\u003E\n",
+    "citation": {
+      "volume": "598",
+      "page": null,
+      "year": "2023",
+      "href": "https://api.oyez.org/case_citation/case_citation/27879"
+    },
+    "term": "2022",
+    "description": "A case in which the Court held that federal district courts have jurisdiction to hear constitutional challenges to the Federal Trade Commission\u2019s structure, procedure, and existence.",
+    "justia_url": "https://supreme.justia.com/cases/federal/us/598/21-86/"
+  },
+  {
+    "ID": 63455,
+    "name": "Sackett v. Environmental Protection Agency",
+    "href": "https://api.oyez.org/cases/2022/21-454",
+    "view_count": 0,
+    "docket_number": "21-454",
+    "timeline": [
+      {
+        "event": "Granted",
+        "dates": [1643004000],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55039"
+      },
+      {
+        "event": "Argued",
+        "dates": [1664773200],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55157"
+      },
+      {
+        "event": "Decided",
+        "dates": [1684990800],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55282"
+      }
+    ],
+    "question": "\u003Cp\u003EWhat is the proper test for determining whether wetlands are \u201cwaters of the United States\u201d under the Clean Water Act?\u00a0\u003C/p\u003E\n",
+    "citation": {
+      "volume": "598",
+      "page": null,
+      "year": "2023",
+      "href": "https://api.oyez.org/case_citation/case_citation/27880"
+    },
+    "term": "2022",
+    "description": "A case in which the Court held that wetlands are \u201cwaters of the United States\u201d under the Clean Water Act only if they have a continuous surface connection with traditional navigable waters.",
+    "justia_url": "https://supreme.justia.com/cases/federal/us/598/21-454/"
+  },
+  {
+    "ID": 63456,
+    "name": "303 Creative LLC v. Elenis",
+    "href": "https://api.oyez.org/cases/2022/21-476",
+    "view_count": 0,
+    "docket_number": "21-476",
+    "timeline": [
+      {
+        "event": "Granted",
+        "dates": [1645509600],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55045"
+      },
+      {
+        "event": "Argued",
+        "dates": [1670220000],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55182"
+      },
+      {
+        "event": "Decided",
+        "dates": [1688101200],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55299"
+      }
+    ],
+    "question": "\u003Cp\u003EDoes application of the Colorado AntiDiscrimination Act to compel an artist to speak or stay silent violate the Free Speech Clause of the First Amendment?\u003C/p\u003E\n",
+    "citation": {
+      "volume": "600",
+      "page": null,
+      "year": "2023",
+      "href": "https://api.oyez.org/case_citation/case_citation/27881"
+    },
+    "term": "2022",
+    "description": "A case in which the Court held that applying a public-accommodation law to compel an artist to speak or stay silent violates the Free Speech Clause of the First Amendment. \u200b\u200b",
+    "justia_url": "https://supreme.justia.com/cases/federal/us/600/21-476/"
+  },
+  {
+    "ID": 63457,
+    "name": "Arellano v. McDonough",
+    "href": "https://api.oyez.org/cases/2022/21-432",
+    "view_count": 0,
+    "docket_number": "21-432",
+    "timeline": [
+      {
+        "event": "Granted",
+        "dates": [1645509600],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55046"
+      },
+      {
+        "event": "Argued",
+        "dates": [1664859600],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55160"
+      },
+      {
+        "event": "Decided",
+        "dates": [1674453600],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55214"
+      }
+    ],
+    "question": "\u003Cp\u003ECan the one-year filing deadline for veterans to submit disability claims after they are discharged be extended under principles of equitable tolling?\u003C/p\u003E\n",
+    "citation": {
+      "volume": "598",
+      "page": null,
+      "year": "2023",
+      "href": "https://api.oyez.org/case_citation/case_citation/27882"
+    },
+    "term": "2022",
+    "description": "A case in which the Court held the one-year filing deadline for veterans to submit disability claims after they are discharged is not subject to principles of equitable tolling, meaning that missing the filing deadline forfeits retroactive disability benefits.",
+    "justia_url": "https://supreme.justia.com/cases/federal/us/598/21-432/"
+  }
+]

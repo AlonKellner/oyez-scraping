@@ -1,0 +1,36 @@
+[
+  {
+    "ID": 63453,
+    "name": "Students for Fair Admissions v. President and Fellows of Harvard College",
+    "href": "https://api.oyez.org/cases/2022/20-1199",
+    "view_count": 0,
+    "docket_number": "20-1199",
+    "timeline": [
+      {
+        "event": "Granted",
+        "dates": [1643004000],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55037"
+      },
+      {
+        "event": "Argued",
+        "dates": [1667192400],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55165"
+      },
+      {
+        "event": "Decided",
+        "dates": [1688014800],
+        "href": "https://api.oyez.org/case_timeline/case_timeline/55304"
+      }
+    ],
+    "question": "\u003Cp\u003EMay institutions of higher education use race as a factor in admissions?\u003C/p\u003E\n\u003Cp\u003EIf so, does Harvard College\u2019s race-conscious admissions process violate Title VI of the Civil Rights Act of 1964?\u003C/p\u003E\n",
+    "citation": {
+      "volume": "600",
+      "page": null,
+      "year": "2023",
+      "href": "https://api.oyez.org/case_citation/case_citation/27878"
+    },
+    "term": "2022",
+    "description": "A case in which the Court overruled its decision in Grutter v. Bollinger to hold that institutions of higher education cannot use race as a factor in admissions.",
+    "justia_url": "https://supreme.justia.com/cases/federal/us/600/20-1199/"
+  }
+]

@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from src.api import OyezAPI
 from src.models import OralArgument
 from src.scraper import OyezScraper
 
@@ -45,6 +46,39 @@ MOCK_ARGUMENT_DATA = {
             ],
         }
     ],
+}
+
+MOCK_TERM_LIST = [
+    "2023",
+    "2022",
+    "2021",
+]
+
+MOCK_CASES_BY_TERM = {
+    "2023": [
+        {
+            "ID": "2023/22-500",
+            "name": "Case One",
+            "oral_argument_audio": [{"href": "https://api.example.com/audio1"}],
+        },
+        {
+            "ID": "2023/22-501",
+            "name": "Case Two",
+            "oral_argument_audio": [],  # No audio available
+        },
+    ],
+    "2022": [
+        {
+            "ID": "2022/21-100",
+            "name": "Case Three",
+            "oral_argument_audio": [{"href": "https://api.example.com/audio3"}],
+        }
+    ],
+}
+
+MOCK_LABELED_AUDIO_TYPES = {
+    "oral-arguments": {"description": "Oral arguments before the Supreme Court"},
+    "opinion-announcements": {"description": "Opinion announcements by the justices"},
 }
 
 
@@ -90,6 +124,51 @@ def test_scrape_case(
         assert len(argument.speakers) == 1
         assert argument.speakers[0].name == "Earl Warren"
         assert len(argument.utterances) == 1
+
+
+@patch("src.api.OyezAPI.get_audio_types")
+@patch("src.api.OyezAPI.get_term_list")
+@patch("src.api.OyezAPI.get_cases_by_term")
+def test_find_all_labeled_audio(
+    mock_get_cases_by_term: Mock, mock_get_term_list: Mock, mock_get_audio_types: Mock
+) -> None:
+    """Test finding all available labeled audio files in Oyez."""
+    # Configure mock responses
+    mock_get_term_list.return_value = MOCK_TERM_LIST
+    mock_get_cases_by_term.side_effect = lambda term: MOCK_CASES_BY_TERM.get(term, [])
+    mock_get_audio_types.return_value = MOCK_LABELED_AUDIO_TYPES
+
+    # Call the function to find all labeled audio
+    all_audio_files = OyezAPI.find_all_labeled_audio()
+
+    # Verify the results
+    assert isinstance(all_audio_files, dict), (
+        "Should return a dictionary of audio types"
+    )
+    assert "oral-arguments" in all_audio_files, "Should include oral arguments"
+    assert "opinion-announcements" in all_audio_files, (
+        "Should include opinion announcements"
+    )
+
+    # Verify the oral arguments section contains case data
+    oral_args = all_audio_files["oral-arguments"]
+    assert isinstance(oral_args, dict), (
+        "Oral arguments should be a dictionary keyed by term"
+    )
+    assert "2023" in oral_args, "Should include 2023 term"
+    assert "2022" in oral_args, "Should include 2022 term"
+
+    # Verify the case data for the 2023 term
+    term_2023 = oral_args["2023"]
+    assert len(term_2023) == 1, "Should only include cases with available audio"
+    assert term_2023[0]["ID"] == "2023/22-500", "Should include the first case"
+
+    # Verify the case data for the 2022 term
+    term_2022 = oral_args["2022"]
+    assert len(term_2022) == 1, "Should only include cases with available audio"
+    assert term_2022[0]["ID"] == "2022/21-100", (
+        "Should include the case from the 2022 term"
+    )
 
 
 @pytest.mark.integration
@@ -173,3 +252,68 @@ def test_real_scraping() -> None:
                 assert "gap_after" in metadata["utterances"][0], (
                     "Utterances should include gap_after info"
                 )
+
+
+@pytest.mark.integration
+def test_find_all_labeled_audio_integration() -> None:
+    """Test finding all available labeled audio files in Oyez with real API calls.
+
+    This test performs actual API calls to Oyez to retrieve information about
+    different types of available labeled audio files.
+    """
+    # Call the function to find all labeled audio without mocks
+    all_audio_files = OyezAPI.find_all_labeled_audio()
+
+    # Verify the basic structure of the response
+    assert isinstance(all_audio_files, dict), (
+        "Should return a dictionary of audio types"
+    )
+
+    # Check if we have some audio types
+    assert len(all_audio_files) > 0, "Should have at least one audio type"
+
+    # Since this is an integration test with real API calls,
+    # we'll get different results depending on API availability.
+    # Let's just verify the structure if data is present.
+
+    print(f"Found audio types: {list(all_audio_files.keys())}")
+
+    # If oral arguments are present, check their structure
+    if "oral-arguments" in all_audio_files:
+        oral_args = all_audio_files["oral-arguments"]
+        assert isinstance(oral_args, dict), "Should be a dictionary"
+
+        print(f"Found terms with oral arguments: {list(oral_args.keys())}")
+
+        # Check any cases that may be available
+        for term, cases in oral_args.items():
+            if cases:
+                assert isinstance(cases, list), "Cases should be a list"
+                print(f"Term {term} has {len(cases)} cases with audio")
+
+                # Check the first case has the expected fields
+                first_case = cases[0]
+                assert "ID" in first_case or "id" in first_case, (
+                    "Case should have an ID"
+                )
+                assert "name" in first_case, "Case should have a name"
+
+                # Print a sample case
+                print(f"Sample case: {first_case.get('name')}")
+                break
+
+    # If opinion announcements are present, check their structure
+    if "opinion-announcements" in all_audio_files:
+        opinion_announcements = all_audio_files["opinion-announcements"]
+        assert isinstance(opinion_announcements, dict), "Should be a dictionary"
+
+        print(
+            f"Found terms with opinion announcements: {list(opinion_announcements.keys())}"
+        )
+
+        # Check any available terms that have announcements
+        for term, cases in opinion_announcements.items():
+            if cases:
+                assert isinstance(cases, list), "Cases should be a list"
+                print(f"Term {term} has {len(cases)} cases with announcements")
+                break

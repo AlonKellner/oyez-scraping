@@ -9,14 +9,13 @@ Use the `uv remove ${some-package}` shell command to remove dependencies from th
 
 # Code generation Guidelines
 
-Use the `Pre-Commit All` task to sync the venv, apply formatting, run tests and to check yourself.  
-After every feature implementation test yourself using pytest tests in the `tests` directory, run the tests with the `Pre-Commit All` command.  
-When the `Pre-Commit All` task fails, next time try to run it with the shell tool using `pre-commit run --all-files`.
+Use the `pre-commit run --all-files` command to sync the venv, apply formatting, run tests and to check yourself.  
+After every feature implementation test yourself using pytest tests in the `tests` directory, run all tests at once with the `pre-commit run --all-files` command.
 
 # Git
 
 Use the `Git add all` task after creating new files to add them to the `pre-commit` context.  
-After making significant changes, run the `Pre-commit All`, then `Git add all` if there are any changes, and then commit them.  
+After making significant changes, run the `pre-commit run --all-files` command, then `Git add all` if there are any changes, and then commit them.  
 Commit messages must follow the pattern "<type>: <sentence>\n[<details>]", where the <type> is one of [feat, fix], the <sentence> is no more than 60 characters and the <details> are optional.  
 Use the `Git push` task after every successful commit on an existing branch.
 

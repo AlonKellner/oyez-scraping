@@ -38,9 +38,4 @@ The project uses several code quality tools configured with pre-commit:
 - pytest for testing
 - typos for spell checking
 
-Run checks using VS Code tasks:
-
-```sh
-Command Palette > Tasks: Run Task > Pre-Commit All  # Check all files
-Command Palette > Tasks: Run Task > Pre-Commit Current  # Check current file
-```
+Run checks by committing.

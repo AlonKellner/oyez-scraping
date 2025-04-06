@@ -41,7 +41,6 @@ class OyezScraper:
         -------
             Tuple of (speaker_list, speaker_map)
         """
-        print("DEBUG: Extracting speakers from:", json.dumps(arg_data, indent=2)[:1000])
         speakers = []
         speaker_map = {}
 
@@ -82,7 +81,6 @@ class OyezScraper:
                         speakers.append(speaker)
                         speaker_map[speaker.identifier] = speaker
 
-        print(f"DEBUG: Found {len(speakers)} speakers")
         return speakers, speaker_map
 
     def _extract_utterances(
