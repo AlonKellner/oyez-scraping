@@ -52,10 +52,10 @@ reportUnusedImport = "error"
 reportUnusedClass = "error"
 reportUnusedFunction = "error"
 reportUnusedVariable = "error"
-extraPaths = []
+extraPaths = ["./src"]
 
 [tool.pytest.ini_options]
-pythonpath = "./"
+pythonpath = ["./", "./src"]
 markers = ["integration: mark a test as an integration test."]
 
 [tool.typos.files]

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+uv self update
 pre-commit autoupdate
 uv sync --upgrade
 pre-commit run --all-files

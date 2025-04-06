@@ -5,6 +5,7 @@ These instructions are designed to guide an LLM agent through the development of
 ## Project Understanding Phase
 
 1. **API Exploration First**:
+
    - Before writing any code, thoroughly investigate the Oyez API structure
    - Document the inconsistencies between endpoints:
      - Direct case lookup (`https://api.oyez.org/cases/{term}/{docket_number}`) returns complete audio data
@@ -17,6 +18,7 @@ These instructions are designed to guide an LLM agent through the development of
    - Map the relationship between cases, oral arguments, speakers, and utterances
 
 2. **Domain Modeling**:
+
    - Define clear domain models that represent the business entities
    - Create separate API-level DTOs that handle the inconsistent API formats
    - Use data validation (e.g., Pydantic) to ensure data integrity
@@ -35,6 +37,7 @@ These instructions are designed to guide an LLM agent through the development of
 ## Development Principles
 
 1. **Incremental Development with Testing**:
+
    - Start with the infrastructure layer and build upward
    - Implement one small, testable component at a time
    - Write tests for each component before moving to the next
@@ -42,6 +45,7 @@ These instructions are designed to guide an LLM agent through the development of
    - Prioritize having a working end-to-end flow, even with limited functionality
 
 2. **Single Responsibility Principle**:
+
    - Each module, class, and function should have exactly one responsibility
    - Split large, complex functions into smaller focused ones:
      - `_extract_speakers()` should only extract speakers
@@ -51,6 +55,7 @@ These instructions are designed to guide an LLM agent through the development of
    - Use meaningful names that reflect specific responsibilities
 
 3. **Robust Error Handling**:
+
    - Create custom exceptions for different error scenarios:
      - `OyezApiError` for API-related issues
      - `AudioProcessingError` for audio processing issues
@@ -60,6 +65,7 @@ These instructions are designed to guide an LLM agent through the development of
    - Add detailed error context to help with debugging
 
 4. **Code Organization**:
+
    - Organize code following the layered architecture
    - Use consistent naming patterns across similar components
    - Add docstrings to all public functions and classes explaining:
@@ -80,6 +86,7 @@ These instructions are designed to guide an LLM agent through the development of
 For each feature you implement, follow this workflow:
 
 1. **Plan**:
+
    - Define the feature's scope
    - Identify the modules that need to be created or modified
    - Define the interfaces between components
@@ -87,12 +94,14 @@ For each feature you implement, follow this workflow:
    - Identify potential failure modes
 
 2. **Test-First Development**:
+
    - Write tests for the feature before implementation
    - Use real API response examples from the docs directory as test fixtures
    - Include both happy path and error cases
    - Mock external dependencies
 
 3. **Implement**:
+
    - Implement the core functionality
    - Add robust error handling
    - Add appropriate logging at different levels:
@@ -105,12 +114,14 @@ For each feature you implement, follow this workflow:
    - Include type hints and docstrings
 
 4. **Validate**:
+
    - Run tests to verify functionality
    - Fix any failures
    - Check code coverage
    - Add additional tests if needed
 
 5. **Refactor**:
+
    - Clean up the implementation
    - Eliminate code smells
    - Improve naming
@@ -118,6 +129,7 @@ For each feature you implement, follow this workflow:
    - Extract reusable components
 
 6. **Document**:
+
    - Update documentation
    - Add code comments for complex logic
    - Document API usage patterns and workarounds
@@ -129,6 +141,7 @@ For each feature you implement, follow this workflow:
 ## Specific Guidelines for Oyez Scraping
 
 1. **API Handling**:
+
    - Create separate client classes for different endpoint types:
      - Base API client with common functionality
      - Case client for case-related endpoints
@@ -141,13 +154,21 @@ For each feature you implement, follow this workflow:
    - Handle list vs object response formats consistently
 
 2. **Audio Processing**:
+
    - Use small, focused functions for audio manipulation
    - Decouple audio downloading from processing
    - Implement streaming download for large files to avoid memory issues
    - Add validation to ensure audio files are valid before processing
    - Handle cases where audio might be in different formats
+   - Prefer FLAC format for speech content due to its lossless compression
+   - Implement proper normalization for consistent audio levels
+   - Include special handling for multi-channel audio conversion to mono
+   - Use torchaudio for reliable audio processing operations
+
+> **Implementation Note**: The `audio_io.py` module follows these guidelines with focused functions for different operations (loading, saving, format detection), comprehensive parameter validation, and proper error handling through custom exceptions that preserve the original error context.
 
 3. **Complex Data Extraction**:
+
    - Create specialized parsers for complex nested structures
    - Implement robust extraction of speakers from different locations:
      - Extract from "sections" array
@@ -166,12 +187,14 @@ For each feature you implement, follow this workflow:
 ## Testing Best Practices
 
 1. **Test Structure**:
+
    - Organize tests to match the code structure
    - Separate unit, integration, and end-to-end tests
    - Use fixtures based on real API responses from the docs directory
    - Use parametrized tests for testing multiple similar cases
 
 2. **Mock External Dependencies**:
+
    - Create detailed mock API responses based on the actual examples in `docs/api_investigation/`
    - Use dependency injection to facilitate testing
    - Test edge cases like:
@@ -182,6 +205,7 @@ For each feature you implement, follow this workflow:
    - Verify error handling works as expected
 
 3. **Automated Testing**:
+
    - Set up CI/CD to run tests automatically
    - Include both fast unit tests and slower integration tests
    - Set standards for code coverage
@@ -196,12 +220,14 @@ For each feature you implement, follow this workflow:
 ## Documentation Guidelines
 
 1. **Code Documentation**:
+
    - Add docstrings to all public classes and functions
    - Include parameter descriptions and return values
    - Document exceptions that might be raised
    - Add examples for complex operations
 
 2. **Project Documentation**:
+
    - Create a clear README with setup and usage instructions
    - Include architecture documentation
    - Document API inconsistencies and workarounds discovered during development
@@ -219,6 +245,7 @@ For each feature you implement, follow this workflow:
 ## Progress Tracking
 
 1. **Milestone Planning**:
+
    - Break the project into clear milestones aligned with the layered architecture:
      - Milestone 1: Infrastructure layer
      - Milestone 2: Domain models
@@ -250,6 +277,7 @@ When making decisions during development, prioritize:
 Start with a minimal viable product (MVP) that achieves basic functionality:
 
 1. **MVP Phase (First 20% of effort):**
+
    - Base API client that handles both term lookup and direct case lookup
    - Simple domain models for cases, speakers, and utterances
    - Basic service to extract data from API responses
@@ -257,6 +285,7 @@ Start with a minimal viable product (MVP) that achieves basic functionality:
    - Simple CLI to process a single case
 
 2. **Enhancement Phase (Next 40% of effort):**
+
    - Add robust error handling and retries
    - Improve data extraction to handle edge cases
    - Add audio processing to extract utterance segments

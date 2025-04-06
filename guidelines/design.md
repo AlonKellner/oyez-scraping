@@ -60,6 +60,7 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 ### Infrastructure Layer
 
 #### `oyez_api/` - API Client Module
+
 - `client.py`: Base API client with rate limiting, retries, and error handling
 - `case_client.py`: Case-specific API endpoints (direct case and term-based lookups)
 - `audio_client.py`: Audio-specific API endpoints
@@ -68,19 +69,24 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 - `response_parsers.py`: Specialized parsers for different API response formats
 
 #### `storage/` - Storage Module
+
 - `filesystem.py`: Filesystem storage implementation
 - `models.py`: Storage models
 - `exceptions.py`: Storage-specific exceptions
 
 #### `processing/` - Audio Processing Module
-- `audio_processor.py`: Audio loading, processing, and extracting
+
+- `audio_io.py`: Audio loading, saving with format handling and normalization
 - `format_converter.py`: Convert between audio formats
 - `models.py`: Processing models
 - `exceptions.py`: Processing-specific exceptions
 
+> **Implementation Note**: The `audio_io.py` module has been implemented following these design principles. It provides robust loading and saving of audio files with proper error handling, normalization, and support for different formats including FLAC, which is preferred for speech analysis. The implementation includes comprehensive tests and follows the error handling strategy defined in this document.
+
 ### Core Domain Layer
 
 #### `domain/` - Domain Models
+
 - `case.py`: Case domain model
 - `audio.py`: Audio domain model
 - `transcript.py`: Transcript domain model
@@ -90,6 +96,7 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 ### Domain Services Layer
 
 #### `services/` - Business Logic
+
 - `case_service.py`: Case-related business logic
 - `audio_service.py`: Audio-related business logic
 - `analytics_service.py`: Statistics and reporting logic
@@ -97,6 +104,7 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 ### Dataset Generation Layer
 
 #### `dataset/` - Dataset Generation
+
 - `generator.py`: Main dataset generation logic
 - `formatters/`: Different dataset output formats
   - `basic.py`: Simple directory structure with audio and transcripts
@@ -106,6 +114,7 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 ### Client Applications
 
 #### `cli/` - Command Line Interface
+
 - `main.py`: Entry point for CLI
 - `commands/`: Command implementations
 
@@ -248,8 +257,8 @@ class OralArgument(BaseModel):
     audio: AudioFile
     speakers: List<Speaker>
     utterances: List<Utterance>
-    term: Optional[str] = None
-    description: Optional[str] = None
+    term: Optional[str> = None
+    description: Optional[str> = None
 
     def get_speaker_by_id(self, identifier: str) -> Optional[Speaker]:
         """Get a speaker by their identifier."""
@@ -395,7 +404,7 @@ class CaseService:
         return speakers
 
     def _process_section_speakers(
-        self, section: Dict[str, Any], speakers: List[Speaker], speaker_map: Dict[str, Speaker]
+        self, section: Dict[str, Any], speakers: List[Speaker], speaker_map: Dict[str, Speaker>
     ) -> None:
         """Process speakers in a section."""
         for turn in section.get("turns", []):
@@ -412,7 +421,7 @@ class CaseService:
                 speakers.append(speaker)
                 speaker_map[speaker.identifier] = speaker
 
-    def _extract_role(self, speaker_data: Dict[str, Any]) -> str:
+    def _extract_role(self, speaker_data: Dict[str, Any>) -> str:
         """Extract role from speaker data."""
         if not speaker_data.get("roles"):
             return "Unknown"
@@ -424,7 +433,7 @@ class CaseService:
         return "Unknown"
 
     def _extract_utterances(
-        self, arg_data: Dict[str, Any], speakers: List[Speaker]
+        self, arg_data: Dict[str, Any>, speakers: List[Speaker>
     ) -> List[Utterance]:
         """Extract utterances from argument data."""
         # Implementation would be similar to the original but with better error handling
@@ -562,8 +571,8 @@ class DatasetGenerator:
             json.dump(metadata, f, indent=2)
 
     def _calculate_utterance_metrics(
-        self, utterances: List[Utterance], total_duration: float
-    ) -> Dict[str, Any]:
+        self, utterances: List[Utterance>, total_duration: float
+    ) -> Dict[str, Any>:
         """Calculate metrics about utterances."""
         # Implementation similar to original but better structured
         # This is just a placeholder
@@ -577,16 +586,19 @@ class DatasetGenerator:
 ## Testing Strategy
 
 1. **Unit Tests**: Test individual components in isolation with proper mocking
+
    - Use detailed mock responses based on the real API examples in `docs/api_investigation/`
    - Test each layer with its dependencies mocked
    - Focus on business logic and edge cases
 
 2. **Integration Tests**: Test interactions between components
+
    - Test API client against a mock server with realistic responses
    - Test storage operations with a test directory
    - Test audio processing with sample files
 
 3. **End-to-end Tests**: Test complete workflows
+
    - Test the complete dataset generation process
    - Use a small sample of real or mock data
 
@@ -597,21 +609,25 @@ class DatasetGenerator:
 ## Implementation Plan
 
 1. **Phase 1: Infrastructure Layer**
+
    - Implement API client with proper error handling and rate limiting
    - Explicitly handle the different API endpoint behaviors discovered in the docs
    - Implement storage client for filesystem operations
    - Implement audio processing utilities
 
 2. **Phase 2: Domain Layer**
+
    - Implement domain models with proper validation
    - Create DTOs for the specific Oyez API response formats
 
 3. **Phase 3: Service Layer**
+
    - Implement case service with specialized methods for complex data extraction
    - Implement audio service for audio processing
    - Implement analytics service for statistics
 
 4. **Phase 4: Dataset Generation**
+
    - Implement dataset generator
    - Implement formatters for different output formats
 

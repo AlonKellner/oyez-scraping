@@ -15,17 +15,20 @@ After every feature implementation test yourself using pytest tests in the `test
 ## Development Principles
 
 1. **Incremental Development**:
+
    - Implement one small, testable component at a time
    - Verify that existing tests pass before moving on
    - Focus on having a working end-to-end flow, even with limited functionality
 
 2. **Clean Code Practices**:
+
    - Follow the Single Responsibility Principle - each function should do one thing well
    - Keep functions under 25 lines whenever possible
    - Use meaningful and descriptive names for functions, classes, and variables
    - Add proper docstrings and type hints to all public functions and classes
 
 3. **Error Handling**:
+
    - Create appropriate custom exceptions for different error scenarios
    - Implement proper retries with backoff for network operations
    - Add contextual information to error messages to aid debugging
@@ -58,6 +61,7 @@ Use the `Git push` task after every successful commit on an existing branch.
 # Testing Best Practices
 
 1. **Test Structure**:
+
    - Organize tests to match the code structure
    - Separate unit, integration, and end-to-end tests
    - Use parametrized tests for checking multiple similar cases
@@ -70,6 +74,7 @@ Use the `Git push` task after every successful commit on an existing branch.
 # Documentation
 
 1. **Code Documentation**:
+
    - Add docstrings to all public functions and classes explaining:
      - What the function does
      - Parameters and their purpose
@@ -87,7 +92,6 @@ Use the `Git push` task after every successful commit on an existing branch.
 
 Since this is a devcontainer, when making changes to the environment please make sure to add the new installations and setup to an automated script or a persistent tool, such as the devcontainer dockerfile, or using the `uv add/remove` shell commands etc.
 This dev container includes the Docker CLI (`docker`) pre-installed and available on the `PATH` for running and managing containers using the Docker daemon on the host machine.
-Use the `Pre-Commit All` and `Pre-commit Current` tasks to check yourself.
 
 # Decision-Making Principles
 
