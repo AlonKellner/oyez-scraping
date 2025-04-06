@@ -1,24 +1,31 @@
-# Chat guidelines
+# Concise LLM Agent Instructions
 
-When running vscode tasks in quick succession please don't explain them or your process until you finished running them all, and even when all tasks end please be concise with your explanations.
+## Code Quality
+- Write one small, testable component at a time; verify existing tests pass before continuing.
+- Keep functions under 25 lines with single responsibility; use descriptive names.
+- Add docstrings and type hints to all public functions and classes.
+- Prefer simple solutions over complex ones.
+- Document complex logic with clear comments.
 
-# Dependencies
+## Error Handling
+- Create custom exceptions for different error types; never silently ignore exceptions.
+- Handle errors with proper context for debugging.
+- Implement robust retries with backoff for network operations.
 
-Use the `uv add ${some-package}` shell command to add dependencies to the project (in the pyproject.toml).  
-Use the `uv remove ${some-package}` shell command to remove dependencies from the project (in the pyproject.toml).
+## Testing
+- Write tests before implementation; mock external dependencies appropriately.
+- Use dependency injection to improve testability.
+- Organize tests to match the code structure they're testing.
+- Test changes with `pre-commit run --all-files` before committing.
 
-# Code generation Guidelines
+## Development Workflow
+- Refactor continuously; don't accumulate technical debt.
+- Focus on making individual pieces work correctly before connecting them.
+- Add packages with `uv add package-name`; remove with `uv remove package-name`.
+- Add new files to git with the "Git add all" task.
+- Format commit messages as `<type>: <sentence>` where type is "feat" or "fix".
+- After committing, push changes with the "Git push" task.
 
-Use the `pre-commit run --all-files` command to sync the venv, apply formatting, run tests and to check yourself.  
-After every feature implementation test yourself using pytest tests in the `tests` directory, run all tests at once with the `pre-commit run --all-files` command.
-
-# Git
-
-Use the `Git add all` task after creating new files to add them to the `pre-commit` context.  
-After making significant changes, run the `pre-commit run --all-files` command, then `Git add all` if there are any changes, and then commit them.  
-Commit messages must follow the pattern "<type>: <sentence>\n[<details>]", where the <type> is one of [feat, fix], the <sentence> is no more than 60 characters and the <details> are optional.  
-Use the `Git push` task after every successful commit on an existing branch.
-
-# Environment
-
-Since this is a devcontainer, when making changes to the environment please make sure to add the new installations and setup to an automated script or a persistent tool, such as the devcontainer dockerfile, or using the `uv add/remove` shell commands etc.
+## Environment & Architecture
+- When updating environment, add changes to devcontainer configuration.
+- Prioritize code correctness, testability, and maintainability over cleverness.
