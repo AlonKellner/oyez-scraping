@@ -4,6 +4,15 @@
 
 ### Added
 
+- Implemented raw data scraping and caching system:
+
+  - Created filesystem storage module with comprehensive error handling
+  - Developed `RawDataCache` for efficiently caching Oyez API responses and audio files
+  - Built `RawDataScraperService` for downloading and managing raw data with robust caching
+  - Implemented utilities for exploring cached data structure and content
+  - Added demo scripts for scraping and exploring cached data
+  - Improved security by using SHA-256 instead of MD5 for hashing operations
+
 - Added support for opinion announcements and dissenting opinions in addition to oral arguments:
 
   - New `AudioContentType` constants for different content types
@@ -25,6 +34,7 @@
   - Base `InfrastructureError` class
   - Specialized `AudioProcessingError` class with context information
   - API-specific exceptions including `OyezApiError`, `RateLimitError`, `NetworkError`, `ResponseFormatError`, and `AudioUrlError`
+  - Storage-specific exceptions including `StorageError`, `FileReadError`, `FileWriteError`, `DirectoryCreationError`, and `CacheError`
 
 - Added comprehensive testing suite:
 
@@ -32,6 +42,8 @@
   - Integration tests for file operations and format conversions
   - Error handling tests for edge cases
   - Integration tests for Oyez API endpoints validating structure, relations, and media availability
+  - Unit tests for storage and caching components
+  - Integration tests for the raw data scraper service
 
 - Implemented Oyez API client infrastructure:
   - Base API client with rate limiting and retry functionality
