@@ -32,11 +32,49 @@ class OyezCaseClient(OyezClient):
     opinion announcements, and associated media from the Oyez API.
     """
 
-    def get_cases_by_term(self, term: str) -> list[dict[str, Any]]:
+    def get_all_cases(
+        self, labels: bool = False, page: int = 0, per_page: int = 1000
+    ) -> list[dict[str, Any]]:
+        """Get list of all cases from the Oyez API.
+
+        Args:
+            labels: Whether to include label information in the response
+            page: Page number for pagination (0-indexed)
+            per_page: Number of cases per page (max 1000)
+
+        Returns
+        -------
+            A list of case data dictionaries
+
+        Raises
+        ------
+            OyezApiConnectionError: If connection to the API fails
+            OyezApiResponseError: If the API returns an unexpected response
+            OyezResourceNotFoundError: If no cases are found
+        """
+        endpoint = "cases"
+        params = {"labels": str(labels).lower(), "page": page, "per_page": per_page}
+
+        logger.debug("Getting all cases with params: %s", params)
+        response = self.get(endpoint, params=params)
+
+        if not isinstance(response, list):
+            raise OyezApiResponseError(f"Expected list of cases, got {type(response)}")
+
+        if not response:
+            raise OyezResourceNotFoundError("No cases found")
+
+        logger.info(f"Retrieved {len(response)} cases")
+        return response
+
+    def get_cases_by_term(
+        self, term: str, labels: bool = False
+    ) -> list[dict[str, Any]]:
         """Get list of cases for a specific Supreme Court term.
 
         Args:
             term: The Supreme Court term (year) to fetch cases for
+            labels: Whether to include label information in the response
 
         Returns
         -------
@@ -49,9 +87,9 @@ class OyezCaseClient(OyezClient):
             OyezResourceNotFoundError: If no cases are found for the term
         """
         endpoint = "cases"
-        params = {"filter": f"term:{term}"}
+        params = {"filter": f"term:{term}", "labels": str(labels).lower()}
 
-        logger.debug(f"Getting cases for term {term}")
+        logger.debug(f"Getting cases for term {term}, labels={labels}")
         response = self.get(endpoint, params=params)
 
         if not isinstance(response, list):

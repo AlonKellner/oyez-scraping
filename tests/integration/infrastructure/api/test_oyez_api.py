@@ -123,6 +123,74 @@ class TestOyezApiEndpoints:
             "This indicates an API change!"
         )
 
+    def test_all_cases_lookup(self, case_client: OyezCaseClient) -> None:
+        """Test that the all cases lookup returns the expected structure."""
+        # Use our client to get all cases, limiting to a small number for the test
+        cases = case_client.get_all_cases(per_page=10)
+
+        # Basic validation of the response
+        assert isinstance(cases, list), "All cases lookup should return a list of cases"
+        assert len(cases) > 0, "No cases found in all cases lookup"
+        assert len(cases) <= 10, "Should respect per_page parameter"
+
+        # Check the structure of the first case
+        first_case = cases[0]
+        assert "ID" in first_case, "Case should have an ID field"
+        assert "name" in first_case, "Case should have a name field"
+        assert "docket_number" in first_case, "Case should have a docket_number field"
+
+        # Print for debugging purposes
+        print(
+            f"First case from all cases lookup: {first_case['name']} (ID: {first_case['ID']})"
+        )
+
+        # Check that the all cases lookup does NOT include audio information (like term lookup)
+        assert "oral_argument_audio" not in first_case, (
+            "All cases lookup should not include oral_argument_audio field. "
+            "This indicates an API change!"
+        )
+
+    def test_labels_parameter(self, case_client: OyezCaseClient) -> None:
+        """Test the labels parameter in the API requests."""
+        # Get cases with and without labels
+        cases_with_labels = case_client.get_all_cases(labels=True, per_page=5)
+        cases_without_labels = case_client.get_all_cases(labels=False, per_page=5)
+
+        # Basic validation of both responses
+        assert isinstance(cases_with_labels, list), "Should return a list of cases"
+        assert isinstance(cases_without_labels, list), "Should return a list of cases"
+        assert len(cases_with_labels) > 0, "No cases found with labels"
+        assert len(cases_without_labels) > 0, "No cases found without labels"
+
+        # The content should be similar, but may have differences due to the labels parameter
+        # Structure should be the same in both cases
+        assert "ID" in cases_with_labels[0], "Case should have an ID field with labels"
+        assert "ID" in cases_without_labels[0], (
+            "Case should have an ID field without labels"
+        )
+
+        # Print summary for debugging
+        print(f"Cases with labels: {len(cases_with_labels)}")
+        print(f"Cases without labels: {len(cases_without_labels)}")
+
+        # Test the labels parameter with term-based lookup
+        term_cases_with_labels = case_client.get_cases_by_term(TEST_TERM, labels=True)
+        term_cases_without_labels = case_client.get_cases_by_term(
+            TEST_TERM, labels=False
+        )
+
+        # Verify both return valid results
+        assert len(term_cases_with_labels) > 0, (
+            f"No cases found for term {TEST_TERM} with labels"
+        )
+        assert len(term_cases_without_labels) > 0, (
+            f"No cases found for term {TEST_TERM} without labels"
+        )
+
+        # Print summary for debugging
+        print(f"Term cases with labels: {len(term_cases_with_labels)}")
+        print(f"Term cases without labels: {len(term_cases_without_labels)}")
+
     def test_direct_case_lookup_structure(self, case_data: dict[str, Any]) -> None:
         """Test that the direct case lookup returns the expected structure with audio information."""
         # Validate the response structure
