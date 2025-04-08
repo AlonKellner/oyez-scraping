@@ -33,14 +33,14 @@ class OyezCaseClient(OyezClient):
     """
 
     def get_all_cases(
-        self, labels: bool = False, page: int = 0, per_page: int = 1000
+        self, labels: bool = False, page: int | None = None, per_page: int | None = None
     ) -> list[dict[str, Any]]:
         """Get list of all cases from the Oyez API.
 
         Args:
             labels: Whether to include label information in the response
-            page: Page number for pagination (0-indexed)
-            per_page: Number of cases per page (max 1000)
+            page: Page number for pagination (0-indexed), if None no pagination is used
+            per_page: Number of cases per page, if None no pagination is used
 
         Returns
         -------
@@ -53,7 +53,13 @@ class OyezCaseClient(OyezClient):
             OyezResourceNotFoundError: If no cases are found
         """
         endpoint = "cases"
-        params = {"labels": str(labels).lower(), "page": page, "per_page": per_page}
+        params = {"labels": str(labels).lower()}
+
+        # Only add pagination parameters if they are explicitly provided
+        if page is not None:
+            params["page"] = str(page)
+        if per_page is not None:
+            params["per_page"] = str(per_page)
 
         logger.debug("Getting all cases with params: %s", params)
         response = self.get(endpoint, params=params)

@@ -6,6 +6,7 @@ re-scraping already fetched content.
 
 import hashlib
 import logging
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,9 @@ class RawDataCache:
         """
         self.cache_dir = Path(cache_dir)
         self.storage = FilesystemStorage()
+
+        # Create a lock for thread safety
+        self.lock = threading.RLock()
 
         # Create cache directories
         self._create_cache_structure()
@@ -100,9 +104,10 @@ class RawDataCache:
             CacheError: If the index cannot be saved
         """
         try:
-            index = index or self.cache_index
-            index["metadata"]["last_updated"] = time.time()
-            self.storage.write_json(self.index_path, index)
+            with self.lock:
+                index = index or self.cache_index
+                index["metadata"]["last_updated"] = time.time()
+                self.storage.write_json(self.index_path, index)
         except StorageError as e:
             raise CacheError(f"Failed to save cache index: {e}") from e
 
@@ -116,7 +121,8 @@ class RawDataCache:
         -------
             True if the case is cached, False otherwise
         """
-        return case_id in self.cache_index["cases"]
+        with self.lock:
+            return case_id in self.cache_index["cases"]
 
     def get_case_data(self, case_id: str) -> dict[str, Any]:
         """Get case data from the cache.
@@ -160,14 +166,15 @@ class RawDataCache:
             self.storage.write_json(case_path, case_data)
 
             # Update the cache index
-            self.cache_index["cases"][case_id] = {
-                "path": str(case_path.relative_to(self.cache_dir)),
-                "cached_at": time.time(),
-                "has_audio": False,  # Initially no audio files are cached
-            }
+            with self.lock:
+                self.cache_index["cases"][case_id] = {
+                    "path": str(case_path.relative_to(self.cache_dir)),
+                    "cached_at": time.time(),
+                    "has_audio": False,  # Initially no audio files are cached
+                }
 
-            # Save the updated index
-            self._save_index()
+                # Save the updated index
+                self._save_index()
 
             logger.info(f"Cached case data for {case_id}")
         except StorageError as e:
@@ -183,7 +190,8 @@ class RawDataCache:
         -------
             True if the audio is cached, False otherwise
         """
-        return audio_id in self.cache_index["audio_files"]
+        with self.lock:
+            return audio_id in self.cache_index["audio_files"]
 
     def get_audio_data(self, audio_id: str) -> bytes:
         """Get audio data from the cache.
@@ -203,7 +211,8 @@ class RawDataCache:
             raise CacheError(f"Audio {audio_id} not found in cache")
 
         try:
-            audio_path = self._get_audio_path(audio_id)
+            with self.lock:
+                audio_path = self._get_audio_path(audio_id)
             return self.storage.read_bytes(audio_path)
         except StorageError as e:
             raise CacheError(f"Failed to read audio data: {e}") from e
@@ -235,19 +244,20 @@ class RawDataCache:
             self.storage.write_bytes(audio_path, audio_data)
 
             # Update the cache index
-            self.cache_index["audio_files"][audio_id] = {
-                "path": str(audio_path.relative_to(self.cache_dir)),
-                "cached_at": time.time(),
-                "media_type": media_type,
-                "case_id": case_id,
-            }
+            with self.lock:
+                self.cache_index["audio_files"][audio_id] = {
+                    "path": str(audio_path.relative_to(self.cache_dir)),
+                    "cached_at": time.time(),
+                    "media_type": media_type,
+                    "case_id": case_id,
+                }
 
-            # Update the case entry if a case_id was provided
-            if case_id and case_id in self.cache_index["cases"]:
-                self.cache_index["cases"][case_id]["has_audio"] = True
+                # Update the case entry if a case_id was provided
+                if case_id and case_id in self.cache_index["cases"]:
+                    self.cache_index["cases"][case_id]["has_audio"] = True
 
-            # Save the updated index
-            self._save_index()
+                # Save the updated index
+                self._save_index()
 
             logger.info(f"Cached audio data for {audio_id}")
         except StorageError as e:
@@ -272,14 +282,15 @@ class RawDataCache:
             self.storage.write_json(list_path, case_list)
 
             # Update the cache index
-            self.cache_index["case_lists"][list_name] = {
-                "path": str(list_path.relative_to(self.cache_dir)),
-                "cached_at": time.time(),
-                "count": len(case_list),
-            }
+            with self.lock:
+                self.cache_index["case_lists"][list_name] = {
+                    "path": str(list_path.relative_to(self.cache_dir)),
+                    "cached_at": time.time(),
+                    "count": len(case_list),
+                }
 
-            # Save the updated index
-            self._save_index()
+                # Save the updated index
+                self._save_index()
 
             logger.info(f"Cached case list {list_name} with {len(case_list)} cases")
         except StorageError as e:
@@ -299,16 +310,17 @@ class RawDataCache:
         ------
             CacheError: If the case list is not in the cache or cannot be loaded
         """
-        if list_name not in self.cache_index["case_lists"]:
-            raise CacheError(f"Case list {list_name} not found in cache")
+        with self.lock:
+            if list_name not in self.cache_index["case_lists"]:
+                raise CacheError(f"Case list {list_name} not found in cache")
 
-        try:
-            list_path = (
-                self.cache_dir / self.cache_index["case_lists"][list_name]["path"]
-            )
-            return self.storage.read_json(list_path)
-        except StorageError as e:
-            raise CacheError(f"Failed to read case list: {e}") from e
+            try:
+                list_path = (
+                    self.cache_dir / self.cache_index["case_lists"][list_name]["path"]
+                )
+                return self.storage.read_json(list_path)
+            except StorageError as e:
+                raise CacheError(f"Failed to read case list: {e}") from e
 
     def case_list_exists(self, list_name: str) -> bool:
         """Check if a case list exists in the cache.
@@ -320,7 +332,8 @@ class RawDataCache:
         -------
             True if the case list is cached, False otherwise
         """
-        return list_name in self.cache_index["case_lists"]
+        with self.lock:
+            return list_name in self.cache_index["case_lists"]
 
     def _get_case_path(self, case_id: str) -> Path:
         """Generate a filesystem path for a case.
@@ -366,7 +379,8 @@ class RawDataCache:
         -------
             Set of case IDs
         """
-        return set(self.cache_index["cases"].keys())
+        with self.lock:
+            return set(self.cache_index["cases"].keys())
 
     def get_cache_stats(self) -> dict[str, Any]:
         """Get statistics about the cache.
@@ -375,12 +389,13 @@ class RawDataCache:
         -------
             Dictionary with cache statistics
         """
-        return {
-            "case_count": len(self.cache_index["cases"]),
-            "audio_count": len(self.cache_index["audio_files"]),
-            "case_list_count": len(self.cache_index["case_lists"]),
-            "last_updated": self.cache_index["metadata"]["last_updated"],
-        }
+        with self.lock:
+            return {
+                "case_count": len(self.cache_index["cases"]),
+                "audio_count": len(self.cache_index["audio_files"]),
+                "case_list_count": len(self.cache_index["case_lists"]),
+                "last_updated": self.cache_index["metadata"]["last_updated"],
+            }
 
     def clear_cache(self) -> None:
         """Clear the entire cache.
@@ -392,22 +407,23 @@ class RawDataCache:
             CacheError: If the cache cannot be cleared
         """
         try:
-            # Create a fresh index
-            self.cache_index = {
-                "metadata": {
-                    "created_at": time.time(),
-                    "last_updated": time.time(),
-                    "version": "1.0",
-                },
-                "cases": {},
-                "audio_files": {},
-                "case_lists": {},
-            }
+            with self.lock:
+                # Create a fresh index
+                self.cache_index = {
+                    "metadata": {
+                        "created_at": time.time(),
+                        "last_updated": time.time(),
+                        "version": "1.0",
+                    },
+                    "cases": {},
+                    "audio_files": {},
+                    "case_lists": {},
+                }
 
-            # Save the fresh index
-            self._save_index()
+                # Save the fresh index
+                self._save_index()
 
-            # Remove all files from case directory
+            # Remove all files from case directory (outside lock to reduce lock time)
             for file_path in self.storage.list_files(self.cache_dir / "cases"):
                 file_path.unlink()
 

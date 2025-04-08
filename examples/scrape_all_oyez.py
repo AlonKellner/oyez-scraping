@@ -89,7 +89,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--workers",
         type=int,
-        default=4,
+        default=4,  # Set to 4 workers as requested for better performance
         help="Number of worker threads for parallel processing (default: 4)",
     )
 
@@ -110,8 +110,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--retry-limit",
         type=int,
-        default=5,
-        help="Maximum number of retries for failed requests (default: 5)",
+        default=10,  # Increased from 5 to handle rate limiting better
+        help="Maximum number of retries for failed requests (default: 10)",
+    )
+
+    parser.add_argument(
+        "--retry-delay",
+        type=int,
+        default=30,
+        help="Delay in seconds between retries (default: 30)",
     )
 
     return parser.parse_args()
