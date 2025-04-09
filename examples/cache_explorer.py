@@ -30,8 +30,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cache-dir",
         type=str,
-        default=".app_cache",
-        help="Directory where cache files are stored (default: .app_cache)",
+        default=".output",
+        help="Directory where cache files are stored (default: .output)",
     )
 
     parser.add_argument(

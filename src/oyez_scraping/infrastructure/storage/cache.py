@@ -25,7 +25,7 @@ class RawDataCache:
     while maintaining a cache index to track what has been scraped.
     """
 
-    def __init__(self, cache_dir: str | Path = ".app_cache") -> None:
+    def __init__(self, cache_dir: str | Path = ".output") -> None:
         """Initialize the cache manager.
 
         Args:

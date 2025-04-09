@@ -85,10 +85,17 @@
 ### Fixed
 
 - Fixed the `DownloadService` class to handle retry logic properly:
+
   - Corrected retry mechanism in `_retry_failed_cases` method with proper exponential backoff
   - Fixed wait time calculation between retry rounds
   - Ensured proper updating of statistics during retry operations
   - Improved error handling in retry flows
+
+- Fixed parameter order issue in `DownloadTracker._save_tracker` method:
+  - Corrected parameter order when calling the storage service's `write_json` method
+  - Fixed initialization process to consistently use the storage service
+  - Added comprehensive test coverage to prevent similar issues
+  - Resolved warning messages during download operations
 
 ### Improved
 

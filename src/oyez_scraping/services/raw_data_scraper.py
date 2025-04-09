@@ -32,7 +32,7 @@ class RawDataScraperService:
 
     def __init__(
         self,
-        cache_dir: str | Path = ".app_cache",
+        cache_dir: str | Path = ".output",
         api_client: OyezCaseClient | None = None,
     ) -> None:
         """Initialize the raw data scraper service.

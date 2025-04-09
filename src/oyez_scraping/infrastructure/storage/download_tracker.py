@@ -75,9 +75,8 @@ class DownloadTracker:
                 }
                 # Ensure directory exists
                 self.tracker_path.parent.mkdir(parents=True, exist_ok=True)
-                # Write directly to the file to ensure it's created
-                with open(self.tracker_path, "w", encoding="utf-8") as f:
-                    json.dump(data, f)
+                # Use the storage service to write the file
+                self._save_tracker()
         except Exception as e:
             self.logger.warning(f"Error initializing download tracker: {e}")
             self.failed_items = {}
@@ -95,7 +94,7 @@ class DownloadTracker:
                 "last_updated": time.time(),
                 "version": "1.0",
             }
-            self.storage.write_json(data, self.tracker_path)
+            self.storage.write_json(self.tracker_path, data)
         except Exception as e:
             self.logger.warning(
                 f"Failed to save download tracker to {self.tracker_path}: {e}"

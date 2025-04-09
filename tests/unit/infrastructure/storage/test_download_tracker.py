@@ -264,3 +264,125 @@ def test_save_error_handling(storage: FilesystemStorage, temp_dir: Path) -> None
         # Should have logged a warning
         mock_warning.assert_called_once()
         assert "Failed to save download tracker" in mock_warning.call_args[0][0]
+
+
+class TestDownloadTracker:
+    """Tests for the DownloadTracker class."""
+
+    @pytest.fixture
+    def mock_storage(self) -> mock.Mock:
+        """Create a mock storage object for testing."""
+        mock_storage = mock.Mock()
+        return mock_storage
+
+    @pytest.fixture
+    def temp_cache_dir(self) -> Generator[Path, None, None]:
+        """Create a temporary directory for testing."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield Path(temp_dir)
+
+    def test_init_creates_new_tracker(
+        self, mock_storage: mock.Mock, temp_cache_dir: Path
+    ) -> None:
+        """Test that a new tracker file is created when one doesn't exist."""
+        # Set up mock storage to simulate file not existing
+        _ = temp_cache_dir / "download_tracker.json"
+
+        # Initialize tracker
+        tracker = DownloadTracker(
+            storage=mock_storage,
+            cache_dir=temp_cache_dir,
+            tracker_filename="download_tracker.json",
+        )
+
+        # Verify that the tracker was initialized with empty failed items
+        assert tracker.failed_items == {}
+
+        # Verify that _save_tracker was called to create the file
+        mock_storage.write_json.assert_called_once()
+
+    def test_save_tracker_calls_write_json_with_correct_params(
+        self, mock_storage: mock.Mock, temp_cache_dir: Path
+    ) -> None:
+        """Test that _save_tracker calls write_json with the correct parameters."""
+        # Initialize tracker
+        tracker = DownloadTracker(
+            storage=mock_storage,
+            cache_dir=temp_cache_dir,
+            tracker_filename="download_tracker.json",
+        )
+
+        # Reset mock to clear initialization calls
+        mock_storage.reset_mock()
+
+        # Call _save_tracker
+        tracker._save_tracker()
+
+        # Verify write_json was called with correct parameters
+        mock_storage.write_json.assert_called_once()
+
+        # Check if the first parameter to write_json is the tracker_path
+        args, _ = mock_storage.write_json.call_args
+        assert len(args) >= 1
+
+        # The first argument should be the file path, not the data
+        assert args[0] == tracker.tracker_path, "First argument should be file path"
+
+    def test_mark_failed_adds_new_item(
+        self, mock_storage: mock.Mock, temp_cache_dir: Path
+    ) -> None:
+        """Test that marking an item as failed adds it to the failed_items dict."""
+        # Initialize tracker
+        tracker = DownloadTracker(
+            storage=mock_storage,
+            cache_dir=temp_cache_dir,
+            tracker_filename="download_tracker.json",
+        )
+
+        # Reset mock to clear initialization calls
+        mock_storage.reset_mock()
+
+        # Mark an item as failed
+        item_id = "test_item"
+        item_data = {"key": "value"}
+        tracker.mark_failed(item_id, item_data)
+
+        # Check that the item was added to failed_items
+        assert item_id in tracker.failed_items
+        assert tracker.failed_items[item_id]["item_data"] == item_data
+        assert tracker.failed_items[item_id]["attempts"] == 1
+
+        # Verify that _save_tracker was called
+        mock_storage.write_json.assert_called_once()
+
+    def test_mark_successful_removes_item(
+        self, mock_storage: mock.Mock, temp_cache_dir: Path
+    ) -> None:
+        """Test that marking an item as successful removes it from failed_items."""
+        # Initialize tracker
+        tracker = DownloadTracker(
+            storage=mock_storage,
+            cache_dir=temp_cache_dir,
+            tracker_filename="download_tracker.json",
+        )
+
+        # Add a failed item
+        item_id = "test_item"
+        item_data = {"key": "value"}
+        tracker.failed_items[item_id] = {
+            "item_data": item_data,
+            "attempts": 1,
+            "last_attempt": 0,
+        }
+
+        # Reset mock to clear initialization calls
+        mock_storage.reset_mock()
+
+        # Mark the item as successful
+        tracker.mark_successful(item_id)
+
+        # Check that the item was removed from failed_items
+        assert item_id not in tracker.failed_items
+
+        # Verify that _save_tracker was called
+        mock_storage.write_json.assert_called_once()
