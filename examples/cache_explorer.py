@@ -163,15 +163,17 @@ def show_directory_structure(cache_dir: Path, max_depth: int = 3) -> None:
         count = len(items)
         for i, item in enumerate(items):
             is_last = i == count - 1
-            new_prefix = prefix + ("└── " if is_last else "├── ")
-            prefix + ("    " if is_last else "│   ")
+            item_prefix = prefix + ("└── " if is_last else "├── ")
+            next_level_prefix = prefix + ("    " if is_last else "│   ")
 
             if item.is_dir():
-                print_dir(item, new_prefix, depth + 1)
+                # For directories, pass the next level prefix for recursive calls
+                print(f"{item_prefix}{item.name}/")
+                print_dir(item, next_level_prefix, depth + 1)
             else:
                 # For files, show their size
                 size_kb = item.stat().st_size / 1024
-                print(f"{new_prefix}{item.name} ({size_kb:.2f} KB)")
+                print(f"{item_prefix}{item.name} ({size_kb:.2f} KB)")
 
     print_dir(cache_dir)
 

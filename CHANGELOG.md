@@ -4,6 +4,21 @@
 
 ### Added
 
+- Enhanced download resilience for complete dataset acquisition:
+
+  - Improved `AdaptiveRateLimiter` with more robust rate limiting strategies:
+
+    - Added jitter to prevent synchronized requests and API rate limit triggers
+    - Implemented global delay floor that adapts based on error patterns
+    - Added tracking of consecutive successes/failures for smarter adaptation
+    - Increased maximum retries and backoff times for persistent downloads
+
+  - Added `DownloadTracker` for ensuring download completeness:
+    - Persistent tracking of download state to support resume functionality
+    - Automatic retry mechanism for failed downloads with progressive backoff
+    - Multi-phase download process with targeted retry rounds
+    - Statistics for monitoring download completion status
+
 - Implemented parallel processing and performance optimizations for data scraping:
 
   - Created `AdaptiveRateLimiter` service for intelligent API rate limit handling
@@ -54,6 +69,7 @@
   - Integration tests for Oyez API endpoints validating structure, relations, and media availability
   - Unit tests for storage and caching components
   - Integration tests for the raw data scraper service
+  - Complete test coverage for `DownloadService` including retry logic, error handling, and progress monitoring
 
 - Implemented Oyez API client infrastructure:
   - Base API client with rate limiting and retry functionality
@@ -65,6 +81,14 @@
 - Refactored original audio_io.py into a modular, well-structured component
 - Implemented proper type hints and docstrings throughout the codebase
 - Added documentation for all public functions and classes
+
+### Fixed
+
+- Fixed the `DownloadService` class to handle retry logic properly:
+  - Corrected retry mechanism in `_retry_failed_cases` method with proper exponential backoff
+  - Fixed wait time calculation between retry rounds
+  - Ensured proper updating of statistics during retry operations
+  - Improved error handling in retry flows
 
 ### Improved
 
