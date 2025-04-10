@@ -73,7 +73,7 @@ class RawDataScraperService:
 
         # Check if we already have this list cached
         if not force_refresh and self.cache.case_list_exists(list_name):
-            logger.info(f"Using cached case list for term {term}")
+            logger.debug(f"Using cached case list for term {term}")
             return self.cache.get_case_list(list_name)
 
         try:
@@ -112,7 +112,7 @@ class RawDataScraperService:
 
         # Check if we already have this list cached
         if not force_refresh and self.cache.case_list_exists(list_name):
-            logger.info("Using cached all cases list")
+            logger.debug("Using cached all cases list")
             return self.cache.get_case_list(list_name)
 
         try:
@@ -150,7 +150,7 @@ class RawDataScraperService:
 
         # Check if we already have this case cached
         if not force_refresh and self.cache.case_exists(case_id):
-            logger.info(f"Using cached case data for {case_id}")
+            logger.debug(f"Using cached case data for {case_id}")
             return self.cache.get_case_data(case_id)
 
         try:
@@ -205,11 +205,11 @@ class RawDataScraperService:
 
                     # Skip if already cached and not forcing refresh
                     if not force_refresh and self._content_data_exists(content_id):
-                        logger.info(f"Using cached content data for {content_id}")
+                        logger.debug(f"Using cached content data for {content_id}")
                         detailed_content = self._get_cached_content_data(content_id)
                     else:
                         # Fetch detailed content data based on type
-                        logger.info(f"Fetching {content_type} data from {content_url}")
+                        logger.debug(f"Fetching {content_type} data from {content_url}")
                         if content_type == AudioContentType.ORAL_ARGUMENT:
                             detailed_content = self.api_client.get_oral_argument(
                                 content_url
@@ -274,7 +274,7 @@ class RawDataScraperService:
         try:
             # Skip if already cached and not forcing refresh
             if not force_refresh and self.cache.audio_exists(content_id):
-                logger.info(f"Audio for {content_id} already cached")
+                logger.debug(f"Audio for {content_id} already cached")
                 return None
 
             # Extract audio URL

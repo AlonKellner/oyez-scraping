@@ -197,7 +197,7 @@ class DownloadService:
             for content_list in audio_content.values():
                 audio_count += len(content_list)
 
-            self.logger.info(
+            self.logger.debug(
                 f"Scraped case {term}/{docket} with {audio_count} audio files"
             )
 
@@ -304,6 +304,9 @@ class DownloadService:
         start_time = time.time()
 
         try:
+            # Initial count of errors before processing
+            initial_error_count = self.stats["errors"]
+
             # Process each term sequentially
             for term in terms:
                 try:
@@ -314,7 +317,7 @@ class DownloadService:
                         self.stats["errors"] += 1
 
             # After all terms have been processed, retry any failed cases
-            self._retry_failed_cases(skip_audio=skip_audio)
+            retry_stats = self._retry_failed_cases(skip_audio=skip_audio)
 
             # Get final statistics
             final_stats = self._get_current_stats()
@@ -324,11 +327,39 @@ class DownloadService:
             final_stats["elapsed_time"] = elapsed_time
             final_stats["elapsed_time_formatted"] = format_time(elapsed_time)
 
+            # Add retry statistics - ensure we're dealing with integers
+            attempted = int(retry_stats.get("attempted", 0))
+            recovered = int(retry_stats.get("recovered", 0))
+            permanent_failures = int(retry_stats.get("permanent_failures", 0))
+
+            final_stats["retry_attempted"] = attempted
+            final_stats["retry_recovered"] = recovered
+            final_stats["retry_permanent_failures"] = permanent_failures
+
+            # Calculate total errors and recovery rate
+            total_errors = self.stats["errors"] - initial_error_count
+            recovery_percentage = 0
+            if attempted > 0:
+                recovery_percentage = (recovered / attempted) * 100
+
             self.logger.info(
-                f"Multi-term download completed in {format_time(elapsed_time)}: "
+                f"Multi-term download completed in {final_stats['elapsed_time_formatted']}: "
                 f"{final_stats['items_processed']} cases processed, "
                 f"{final_stats['audio_files_downloaded']} audio files downloaded, "
-                f"{final_stats['errors']} errors"
+                f"{total_errors} initial errors"
+            )
+
+            # Use attempted (which is already safely converted to int) instead of retry_stats["attempted"]
+            if attempted > 0:
+                self.logger.info(
+                    f"Error recovery: Recovered {recovered}/{attempted} "
+                    f"items ({recovery_percentage:.1f}%), {permanent_failures} permanent failures"
+                )
+
+            self.logger.info(
+                f"Final status: Successfully processed {final_stats['items_processed']} cases "
+                f"with {final_stats['audio_files_downloaded']} audio files and "
+                f"{permanent_failures} permanent failures"
             )
 
             return final_stats
@@ -354,6 +385,9 @@ class DownloadService:
         start_time = time.time()
 
         try:
+            # Initial count of errors before processing
+            initial_error_count = self.stats["errors"]
+
             # Get case list for all cases
             case_list = self.scraper.scrape_all_cases()
             self.logger.info(f"Found {len(case_list)} cases to download")
@@ -393,7 +427,7 @@ class DownloadService:
                             self.stats["errors"] += 1
 
             # After all cases have been processed, retry any failed cases
-            self._retry_failed_cases(skip_audio=skip_audio)
+            retry_stats = self._retry_failed_cases(skip_audio=skip_audio)
 
             # Get final statistics
             final_stats = self._get_current_stats()
@@ -403,11 +437,52 @@ class DownloadService:
             final_stats["elapsed_time"] = elapsed_time
             final_stats["elapsed_time_formatted"] = format_time(elapsed_time)
 
+            # Add retry statistics
+            final_stats["retry_attempted"] = retry_stats["attempted"]
+            final_stats["retry_recovered"] = retry_stats["recovered"]
+            final_stats["retry_permanent_failures"] = retry_stats["permanent_failures"]
+
+            # Calculate total errors and recovery rate
+            total_errors = self.stats["errors"] - initial_error_count
+            recovery_percentage = 0
+            # Convert to int for safe comparison, handling MagicMock objects in tests
+            attempted = (
+                int(retry_stats["attempted"])
+                if retry_stats["attempted"] is not None
+                else 0
+            )
+            recovered = (
+                int(retry_stats["recovered"])
+                if retry_stats["recovered"] is not None
+                else 0
+            )
+            permanent_failures = (
+                int(retry_stats["permanent_failures"])
+                if retry_stats["permanent_failures"] is not None
+                else 0
+            )
+
+            if attempted > 0:
+                recovery_percentage = (recovered / attempted) * 100
+
             self.logger.info(
                 f"All cases download completed in {format_time(elapsed_time)}: "
                 f"{final_stats['items_processed']} cases processed, "
                 f"{final_stats['audio_files_downloaded']} audio files downloaded, "
-                f"{final_stats['errors']} errors"
+                f"{total_errors} initial errors"
+            )
+
+            # Use attempted (which is already safely converted to int) instead of retry_stats["attempted"]
+            if attempted > 0:
+                self.logger.info(
+                    f"Error recovery: Recovered {recovered}/{attempted} "
+                    f"items ({recovery_percentage:.1f}%), {permanent_failures} permanent failures"
+                )
+
+            self.logger.info(
+                f"Final status: Successfully processed {final_stats['items_processed']} cases with "
+                f"{final_stats['audio_files_downloaded']} audio files and "
+                f"{final_stats['permanent_failures']} permanent failures"
             )
 
             return final_stats
@@ -418,28 +493,41 @@ class DownloadService:
 
     def _retry_failed_cases(
         self, *, skip_audio: bool = False, max_retries: int = 3
-    ) -> None:
+    ) -> dict[str, int]:
         """Retry failed cases with exponential backoff.
 
         Args:
             skip_audio: If True, skip audio file downloads
             max_retries: Maximum number of retry rounds to attempt
+
+        Returns
+        -------
+            Dictionary with retry statistics including attempted, recovered, and permanent_failures
         """
         if not hasattr(self.download_tracker, "has_failed_items_for_retry"):
             self.logger.warning("Download tracker does not support failed item retry")
-            return
+            return {"attempted": 0, "recovered": 0, "permanent_failures": 0}
 
         retry_round = 0
         retry_wait = 60  # Start with 60 second wait
 
+        # Track retry statistics
+        retry_stats = {
+            "attempted": 0,
+            "recovered": 0,
+            "permanent_failures": 0,
+            "rounds": 0,
+        }
+
         # Initial check if there are items to retry
         if not self.download_tracker.has_failed_items_for_retry():
             self.logger.info("No failed items to retry")
-            return
+            return retry_stats
 
         # Continue retrying until max_retries is reached
         while retry_round < max_retries:
             retry_round += 1
+            retry_stats["rounds"] += 1
             self.logger.info(f"Starting retry round {retry_round}/{max_retries}")
 
             # Get list of failed items to retry
@@ -448,7 +536,12 @@ class DownloadService:
                 self.logger.info("No failed items returned for retry")
                 break
 
-            self.logger.info(f"Retrying {len(failed_items)} failed items")
+            round_items_count = len(failed_items)
+            retry_stats["attempted"] += round_items_count
+            self.logger.info(f"Retrying {round_items_count} failed items")
+
+            # Track successes in this round
+            round_successes = 0
 
             # Process each failed item
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -467,6 +560,8 @@ class DownloadService:
                         with self.stats["lock"]:
                             if success:
                                 self.stats["items_processed"] += 1
+                                round_successes += 1
+                                retry_stats["recovered"] += 1
                             else:
                                 self.stats["errors"] += 1
                             self.stats["audio_files_downloaded"] += audio_count
@@ -474,6 +569,10 @@ class DownloadService:
                         self.logger.error(f"Exception in worker thread: {e}")
                         with self.stats["lock"]:
                             self.stats["errors"] += 1
+
+            self.logger.info(
+                f"Retry round {retry_round} recovered {round_successes}/{round_items_count} items"
+            )
 
             # Check if we should continue to the next round
             if (
@@ -485,3 +584,17 @@ class DownloadService:
                 time.sleep(wait_time)
             else:
                 break
+
+        # Calculate permanent failures after all retries
+        tracker_stats = self.download_tracker.get_stats()
+        retry_stats["permanent_failures"] = tracker_stats["permanent_failures"]
+
+        if retry_stats["attempted"] > 0:
+            recovery_rate = (retry_stats["recovered"] / retry_stats["attempted"]) * 100
+            self.logger.info(
+                f"Retry summary: Recovered {retry_stats['recovered']}/{retry_stats['attempted']} items "
+                f"({recovery_rate:.1f}%) in {retry_stats['rounds']} rounds, "
+                f"{retry_stats['permanent_failures']} permanent failures"
+            )
+
+        return retry_stats

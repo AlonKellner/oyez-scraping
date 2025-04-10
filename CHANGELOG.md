@@ -81,6 +81,7 @@
 - Refactored original audio_io.py into a modular, well-structured component
 - Implemented proper type hints and docstrings throughout the codebase
 - Added documentation for all public functions and classes
+- Reduced logging verbosity by changing log levels from INFO to DEBUG for cache operations and API interactions
 
 ### Fixed
 
@@ -92,10 +93,16 @@
   - Improved error handling in retry flows
 
 - Fixed parameter order issue in `DownloadTracker._save_tracker` method:
+
   - Corrected parameter order when calling the storage service's `write_json` method
   - Fixed initialization process to consistently use the storage service
   - Added comprehensive test coverage to prevent similar issues
   - Resolved warning messages during download operations
+
+- Fixed issue with `DownloadService` class comparing MagicMock objects with integers:
+  - Added safe type conversion for retry statistics to handle MagicMock objects in testing environments
+  - Made the retry statistics reporting more robust by handling None values
+  - Improved the comparison logic in the statistics calculation
 
 ### Improved
 

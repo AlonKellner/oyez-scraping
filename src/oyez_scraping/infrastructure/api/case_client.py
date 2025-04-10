@@ -205,7 +205,7 @@ class OyezCaseClient(OyezClient):
         if content_summary:
             logger.info(f"Found audio content: {content_summary}")
         else:
-            logger.warning("No audio content found in case data")
+            logger.debug("No audio content found in case data")
 
         return result
 

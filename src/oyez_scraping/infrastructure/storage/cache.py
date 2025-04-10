@@ -176,7 +176,7 @@ class RawDataCache:
                 # Save the updated index
                 self._save_index()
 
-            logger.info(f"Cached case data for {case_id}")
+            logger.debug(f"Cached case data for {case_id}")
         except StorageError as e:
             raise CacheError(f"Failed to store case data: {e}") from e
 
@@ -259,7 +259,7 @@ class RawDataCache:
                 # Save the updated index
                 self._save_index()
 
-            logger.info(f"Cached audio data for {audio_id}")
+            logger.debug(f"Cached audio data for {audio_id}")
         except StorageError as e:
             raise CacheError(f"Failed to store audio data: {e}") from e
 
@@ -292,7 +292,7 @@ class RawDataCache:
                 # Save the updated index
                 self._save_index()
 
-            logger.info(f"Cached case list {list_name} with {len(case_list)} cases")
+            logger.debug(f"Cached case list {list_name} with {len(case_list)} cases")
         except StorageError as e:
             raise CacheError(f"Failed to store case list: {e}") from e
 
@@ -435,6 +435,6 @@ class RawDataCache:
             for file_path in self.storage.list_files(self.cache_dir / "metadata"):
                 file_path.unlink()
 
-            logger.info("Cache cleared")
+            logger.debug("Cache cleared")
         except Exception as e:
             raise CacheError(f"Failed to clear cache: {e}") from e
