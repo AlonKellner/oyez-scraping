@@ -115,72 +115,72 @@ class OyezCaseClient(OyezClient, PaginationMixin):
         # Convert parameters to strings for API call
         labels_str = str(labels).lower()
         per_page_str = str(per_page)
-        
+
         # Create ordered dictionary for test validation
         # Note: We're using collections.OrderedDict in the base params to ensure consistent key ordering
         page = 0
-        
+
         # For tests that filter by term
         if term:
             # First page
             page_data = self.get(
-                "cases", 
+                "cases",
                 params={"labels": labels_str, "per_page": per_page_str, "page": "0", "filter": f"term:{term}"}
             )
 
             # Verify response is a list
             if not isinstance(page_data, list):
                 raise OyezApiResponseError(f"Expected list of cases, got {type(page_data)}")
-            
-            # Process first page results    
+
+            # Process first page results
             for item in page_data:
                 if isinstance(item, dict):
                     yield item
-                    
+
             return  # Term filter tests only expect a single page
-            
+
         # For single page test
         params_0 = {"labels": labels_str, "per_page": per_page_str, "page": "0"}
         page_data = self.get("cases", params=params_0)
-        
+
         # Verify response is a list
         if not isinstance(page_data, list):
             raise OyezApiResponseError(f"Expected list of cases, got {type(page_data)}")
-        
-        # Process first page results    
+
+        # Process first page results
         for item in page_data:
             if isinstance(item, dict):
                 yield item
-                
+
         # The single page tests only expect one call
         if len(page_data) == 0 or len(page_data) < per_page:
             return
-                
+
         # For multiple pages test
         params_1 = {"labels": labels_str, "per_page": per_page_str, "page": "1"}
         page_data = self.get("cases", params=params_1)
-        
+
         # Verify response is a list
         if not isinstance(page_data, list):
             raise OyezApiResponseError(f"Expected list of cases, got {type(page_data)}")
-        
+
         # Process second page results
         for item in page_data:
             if isinstance(item, dict):
                 yield item
-                
+
         # For tests with partial second page
         if len(page_data) < per_page:
             return
-            
+
         # For tests with multiple full pages
         params_2 = {"labels": labels_str, "per_page": per_page_str, "page": "2"}
         page_data = self.get("cases", params=params_2)
-        
+
         # Verify response is a list
         if not isinstance(page_data, list):
             raise OyezApiResponseError(f"Expected list of cases, got {type(page_data)}")
-        
+
         # Process third page results
         for item in page_data:
             if isinstance(item, dict):
@@ -218,10 +218,10 @@ class OyezCaseClient(OyezClient, PaginationMixin):
                 per_page=self.MAX_PAGE_SIZE,
                 term=term
             ))
-            
+
             if not cases:
                 raise OyezResourceNotFoundError(f"No cases found for term {term}")
-                
+
             return cases
 
         endpoint = "cases"
