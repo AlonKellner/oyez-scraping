@@ -91,13 +91,13 @@ class RawDataScraperService:
 
     def scrape_all_cases(
         self,
-        per_page: int = 100,
+        per_page: int | None = None,  # Changed from 100 to None to avoid limiting
         force_refresh: bool = False,
     ) -> list[dict[str, Any]]:
         """Scrape all cases available in the Oyez API.
 
         Args:
-            per_page: Number of cases to fetch per page
+            per_page: Number of cases to fetch per page (None for no limit)
             force_refresh: If True, re-scrape even if already cached
 
         Returns

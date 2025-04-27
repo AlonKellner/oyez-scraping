@@ -4,6 +4,11 @@
 
 ### Added
 
+- Implemented request tracking and observability system:
+
+  - Created `RequestMetadata` model for capturing API request details with serialization support
+  - Implemented `RequestLogger` for logging API requests with consistent naming conventions
+
 - Enhanced download resilience for complete dataset acquisition:
 
   - Improved `AdaptiveRateLimiter` with more robust rate limiting strategies:
@@ -82,6 +87,8 @@
 - Implemented proper type hints and docstrings throughout the codebase
 - Added documentation for all public functions and classes
 - Reduced logging verbosity by changing log levels from INFO to DEBUG for cache operations and API interactions
+- Enhanced download resilience for complete dataset acquisition:
+  - Modified `scrape_all_cases` to use `None` as default for `per_page` parameter to avoid pagination limits
 
 ### Fixed
 

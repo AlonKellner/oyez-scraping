@@ -32,16 +32,23 @@ class OyezClient:
     BASE_URL = "https://api.oyez.org"
 
     def __init__(
-        self, timeout: int = 30, session: requests.Session | None = None
+        self,
+        timeout: int = 30,
+        session: requests.Session | None = None,
+        base_url: str | None = None,
     ) -> None:
         """Initialize the Oyez API client.
 
         Args:
             timeout: Request timeout in seconds
             session: Optional requests session to use for API calls
+            base_url: Optional custom base URL (primarily for testing)
         """
         self.timeout = timeout
         self.session = session or requests.Session()
+
+        # Allow overriding base URL (for testing)
+        self.base_url = base_url or self.BASE_URL
 
         # Set default headers for all requests
         self.session.headers.update(
@@ -66,9 +73,9 @@ class OyezClient:
 
         # Handle relative paths
         if url_or_path.startswith("/"):
-            return f"{self.BASE_URL}{url_or_path}"
+            return f"{self.base_url}{url_or_path}"
 
-        return f"{self.BASE_URL}/{url_or_path}"
+        return f"{self.base_url}/{url_or_path}"
 
     @backoff.on_exception(
         backoff.expo,

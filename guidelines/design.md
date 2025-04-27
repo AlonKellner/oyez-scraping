@@ -68,6 +68,8 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 - `exceptions.py`: API-specific exceptions
 - `response_parsers.py`: Specialized parsers for different API response formats
 
+> **Implementation Note**: A detailed design for API client refactoring is available in [docs/designs/api_client_refactoring.md](/workspaces/oyez-scraping/docs/designs/api_client_refactoring.md). This design addresses the need to break down the large `case_client.py` class and share common functionality like auto-pagination between `case_client.py` and `tracked_client.py`.
+
 #### `storage/` - Storage Module
 
 - `filesystem.py`: Filesystem storage implementation
@@ -82,6 +84,14 @@ For the next iteration of the Oyez scraping project, I recommend a modular, laye
 - `exceptions.py`: Processing-specific exceptions
 
 > **Implementation Note**: The `audio_io.py` module has been implemented following these design principles. It provides robust loading and saving of audio files with proper error handling, normalization, and support for different formats including FLAC, which is preferred for speech analysis. The implementation includes comprehensive tests and follows the error handling strategy defined in this document.
+
+#### `monitoring/` - Monitoring and Observability
+
+- `request_logger.py`: Tracks API requests and correlates them with output files
+- `request_metadata.py`: Data models for request tracking
+- `utility.py`: Utility functions for analyzing request logs
+
+> **Implementation Note**: A detailed design for the request tracking and observability system is available in [docs/designs/request_tracking.md](/workspaces/oyez-scraping/docs/designs/request_tracking.md). This design addresses the need to track API requests and correlate them with their output files, enabling better debugging and monitoring.
 
 ### Core Domain Layer
 
@@ -167,7 +177,7 @@ class CaseApiClient:
         cases = self.client.get(f"cases", params={"filter": f"term:{term}"})
         return cases
 
-    def get_case_by_id(self, term: str, docket_number: str) -> Dict[str, Any]:
+    def get_case_by_id(self, term: str, docket_number: str) -> Dict[str, Any]]:
         """Get detailed case data by term and docket number.
 
         Note: This endpoint returns complete case data WITH audio information.
